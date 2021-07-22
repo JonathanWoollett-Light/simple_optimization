@@ -5,7 +5,6 @@ authors = ["Jonathan <jonthanwoollettlight@gmail.com>"]
 edition = "2018"
 description = "Simpler optimizers for simple optimization."
 license = "Apache-2.0"
-exclude = ["tests","benches"]
 
 repository = "https://github.com/JonathanWoollett-Light/simple_optimization"
 documentation = "https://docs.rs/simple_optimization/"
