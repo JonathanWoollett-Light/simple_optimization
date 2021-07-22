@@ -34,10 +34,16 @@ mod tests {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
                 2000,
-                [0f64..10f64, 5f64..15f64, 10f64..20f64, 15f64..25f64, 20f64..30f64],
+                [
+                    0f64..10f64,
+                    5f64..15f64,
+                    10f64..20f64,
+                    15f64..25f64,
+                    20f64..30f64,
+                ],
                 &moderate_function,
             );
-            println!("best: ({}) {:.?}",moderate_function(&best),best);
+            println!("best: ({}) {:.?}", moderate_function(&best), best);
             assert!(moderate_function(&best) < -530000.);
         }
     }
@@ -45,10 +51,10 @@ mod tests {
     #[test]
     fn grid_search() {
         let best = simple_optimization::grid_search(
-            [10,10,10],
+            [10, 10, 10],
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             &simple_function,
         );
-        assert!(best == [1.,6.,11.]);
+        assert!(best == [1., 6., 11.]);
     }
 }

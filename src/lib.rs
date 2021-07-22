@@ -55,20 +55,30 @@ pub fn grid_search<const N: usize>(
         })
         .collect();
 
-    return search_points(&point_values,f);
+    return search_points(&point_values, f);
 
-    fn search_points<const N:usize>(point_values: &Vec<Vec<f64>>, f: &dyn Fn(&[f64; N]) -> f64) -> [f64;N] {
-        let mut start = [Default::default();N];
-        for (s,p) in start.iter_mut().zip(point_values.iter()) {
+    fn search_points<const N: usize>(
+        point_values: &Vec<Vec<f64>>,
+        f: &dyn Fn(&[f64; N]) -> f64,
+    ) -> [f64; N] {
+        let mut start = [Default::default(); N];
+        for (s, p) in start.iter_mut().zip(point_values.iter()) {
             *s = p[0];
         }
         search(point_values, f, start, 0)
     }
-    fn search<const N:usize>(point_values: &Vec<Vec<f64>>, f: &dyn Fn(&[f64; N]) -> f64, mut point: [f64;N], index: usize) -> [f64;N] {
-        if index == point_values.len() - 1 { return point.clone(); }
+    fn search<const N: usize>(
+        point_values: &Vec<Vec<f64>>,
+        f: &dyn Fn(&[f64; N]) -> f64,
+        mut point: [f64; N],
+        index: usize,
+    ) -> [f64; N] {
+        if index == point_values.len() - 1 {
+            return point.clone();
+        }
 
         let mut best_value = f64::MAX;
-        let mut best_params = [Default::default();N];
+        let mut best_params = [Default::default(); N];
         for p_value in point_values[index].iter() {
             point[index] = *p_value;
             let params = search(point_values, f, point, index + 1);
