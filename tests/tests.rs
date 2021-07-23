@@ -4,7 +4,7 @@ mod tests {
     const CHECK_ITERATIONS: usize = 100;
 
     fn simple_function_u8(list: &[u8; 3]) -> f64 {
-        list.iter().map(|u|*u as u16).sum::<u16>() as f64
+        list.iter().map(|u| *u as u16).sum::<u16>() as f64
     }
     fn simple_function(list: &[f64; 3]) -> f64 {
         list.iter().sum()

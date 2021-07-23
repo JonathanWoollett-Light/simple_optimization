@@ -1,9 +1,6 @@
 use itertools::izip;
 use print_duration::print_duration;
-use rand::{
-    distributions::uniform::{SampleRange, SampleUniform},
-    thread_rng, Rng,
-};
+use rand::{distributions::uniform::SampleUniform, thread_rng, Rng};
 use std::{
     f64,
     io::{stdout, Write},
