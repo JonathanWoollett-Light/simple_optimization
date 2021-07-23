@@ -22,7 +22,7 @@ mod tests {
             let best = simple_optimization::random_search(
                 2000,
                 [0f64..10f64, 5f64..15f64, 10f64..20f64],
-                &simple_function,
+                simple_function,
             );
             assert!(best[0] < ALLOWANCE);
             assert!(best[1] < 5. + ALLOWANCE);
@@ -41,7 +41,7 @@ mod tests {
                     15f64..25f64,
                     20f64..30f64,
                 ],
-                &moderate_function,
+                moderate_function,
             );
             println!("best: ({}) {:.?}", moderate_function(&best), best);
             assert!(moderate_function(&best) < -530000.);
@@ -53,7 +53,7 @@ mod tests {
         let best = simple_optimization::grid_search(
             [10, 10, 10],
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
-            &simple_function,
+            simple_function,
         );
         assert!(best == [1., 6., 11.]);
     }
