@@ -14,6 +14,21 @@ use std::{
 };
 
 /// Random search
+/// 
+/// Randomly pick parameters for `simple_function` in the ranges `0..1`, `1..2`, and `3..4` and return the parameters which produce the minimum result from `simple_function` out of 10,000 samples.
+/// 
+/// And every 10ms print progress.
+/// ```
+/// use simple_optimization::random_search;
+/// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
+/// let best = random_search(
+///     10000,
+///     [0f64..1f64,1f64..2f64,3f64..4f64], 
+///     simple_function,
+///     Some(10)
+/// );
+/// assert!(best[0] < 0.1 && best[1] < 1.1 && best[2] < 3.1)
+/// ```
 pub fn random_search<const N: usize>(
     iterations: usize,
     ranges: [Range<f64>; N],
@@ -95,6 +110,18 @@ pub fn random_search<const N: usize>(
 }
 
 /// Grid search
+/// 
+/// ```
+/// use simple_optimization::grid_search;
+/// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
+/// let best = grid_search(
+///     [10,10,10],
+///     [0f64..1f64,1f64..2f64,3f64..4f64],
+///     simple_function,
+///     Some(10)
+/// );
+/// assert!(best[0] == 0.1 && best[1] == 1.1 && best[2] == 3.1)
+/// ```
 pub fn grid_search<const N: usize>(
     points: [usize; N],
     ranges: [Range<f64>; N],
