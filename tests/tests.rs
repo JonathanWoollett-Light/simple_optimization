@@ -3,6 +3,9 @@ mod tests {
     // For random element we want to reruns tests a few times.
     const CHECK_ITERATIONS: usize = 100;
 
+    fn simple_function_u8(list: &[u8; 3]) -> f64 {
+        list.iter().map(|u|*u as u16).sum::<u16>() as f64
+    }
     fn simple_function(list: &[f64; 3]) -> f64 {
         list.iter().sum()
     }
@@ -49,6 +52,20 @@ mod tests {
             assert!(moderate_function(&best) < -530000.);
         }
     }
+    #[test]
+    fn random_search_simple_u8() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::random_search(
+                10000,
+                [0..10, 5..15, 10..20],
+                simple_function_u8,
+                None,
+            );
+            assert_eq!(best[0], 0);
+            assert_eq!(best[1], 5);
+            assert_eq!(best[2], 10);
+        }
+    }
 
     #[test]
     fn grid_search() {
@@ -59,5 +76,15 @@ mod tests {
             None,
         );
         assert!(best == [1., 6., 11.]);
+    }
+    #[test]
+    fn grid_search_u8() {
+        let best = simple_optimization::grid_search(
+            [10, 10, 10],
+            [0..10, 5..15, 10..20],
+            simple_function_u8,
+            None,
+        );
+        assert!(best == [1, 6, 11]);
     }
 }

@@ -17,6 +17,7 @@ rand = "0.8.4"
 itertools = "0.10.1" # izip!
 num_cpus = "1.13.0"
 print_duration = "1.0.0"
+num = "0.4.0"
 
 # benchmarks
 [dev-dependencies]

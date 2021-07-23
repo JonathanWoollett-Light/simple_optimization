@@ -1,10 +1,13 @@
 use itertools::izip;
 use print_duration::print_duration;
-use rand::{thread_rng, Rng};
+use rand::{
+    distributions::uniform::{SampleRange, SampleUniform},
+    thread_rng, Rng,
+};
 use std::{
     f64,
     io::{stdout, Write},
-    ops::Range,
+    ops::{AddAssign, Div, Range, Sub},
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -13,28 +16,33 @@ use std::{
     time::{Duration, Instant},
 };
 
+// TODO Avoid stupid long repeated trait requirements for `T`.
+
 /// Random search
-/// 
+///
 /// Randomly pick parameters for `simple_function` in the ranges `0..1`, `1..2`, and `3..4` and return the parameters which produce the minimum result from `simple_function` out of 10,000 samples.
-/// 
+///
 /// And every 10ms print progress.
 /// ```
 /// use simple_optimization::random_search;
 /// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
 /// let best = random_search(
 ///     10000,
-///     [0f64..1f64,1f64..2f64,3f64..4f64], 
+///     [0f64..1f64,1f64..2f64,3f64..4f64],
 ///     simple_function,
 ///     Some(10)
 /// );
 /// assert!(best[0] < 0.1 && best[1] < 1.1 && best[2] < 3.1)
 /// ```
-pub fn random_search<const N: usize>(
+pub fn random_search<
+    T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
+    const N: usize,
+>(
     iterations: usize,
-    ranges: [Range<f64>; N],
-    f: fn(&[f64; N]) -> f64,
+    ranges: [Range<T>; N],
+    f: fn(&[T; N]) -> f64,
     polling: Option<u64>,
-) -> [f64; N] {
+) -> [T; N] {
     // Gets cpu data
     let cpus = num_cpus::get();
     let remainder = iterations % cpus;
@@ -80,12 +88,15 @@ pub fn random_search<const N: usize>(
 
     return best_params;
 
-    fn search<const N: usize>(
+    fn search<
+        T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
+        const N: usize,
+    >(
         iterations: usize,
-        ranges: Arc<[Range<f64>; N]>,
-        f: fn(&[f64; N]) -> f64,
+        ranges: Arc<[Range<T>; N]>,
+        f: fn(&[T; N]) -> f64,
         counter: Arc<AtomicUsize>,
-    ) -> (f64, [f64; N]) {
+    ) -> (f64, [T; N]) {
         let mut rng = thread_rng();
         let mut params = [Default::default(); N];
 
@@ -94,7 +105,7 @@ pub fn random_search<const N: usize>(
         for _ in 0..iterations {
             // Gen random values
             for (range, param) in ranges.iter().zip(params.iter_mut()) {
-                *param = rng.gen_range(range.clone())
+                *param = rng.gen_range(range.clone());
             }
             // Run function
             let new_value = f(&params);
@@ -110,7 +121,7 @@ pub fn random_search<const N: usize>(
 }
 
 /// Grid search
-/// 
+///
 /// ```
 /// use simple_optimization::grid_search;
 /// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
@@ -122,20 +133,33 @@ pub fn random_search<const N: usize>(
 /// );
 /// assert!(best[0] == 0.1 && best[1] == 1.1 && best[2] == 3.1)
 /// ```
-pub fn grid_search<const N: usize>(
-    points: [usize; N],
-    ranges: [Range<f64>; N],
-    f: fn(&[f64; N]) -> f64,
+pub fn grid_search<
+    T: 'static
+        + Copy
+        + Send
+        + Sync
+        + Default
+        + SampleUniform
+        + PartialOrd
+        + AddAssign
+        + Sub<Output = T>
+        + Div<Output = T>
+        + num::FromPrimitive,
+    const N: usize,
+>(
+    points: [u32; N],
+    ranges: [Range<T>; N],
+    f: fn(&[T; N]) -> f64,
     polling: Option<u64>,
-) -> [f64; N] {
+) -> [T; N] {
     // Compute step sizes
     let mut steps = [Default::default(); N];
     for (r, k, s) in izip!(ranges.iter(), points.iter(), steps.iter_mut()) {
-        *s = (r.end - r.start) / *k as f64;
+        *s = (r.end - r.start) / T::from_u32(*k).unwrap();
     }
 
     // Compute point values
-    let point_values: Vec<Vec<f64>> = izip!(ranges.iter(), points.iter(), steps.iter())
+    let point_values: Vec<Vec<T>> = izip!(ranges.iter(), points.iter(), steps.iter())
         .map(|(r, k, s)| {
             (0..*k)
                 .scan(r.start, |state, _| {
@@ -148,11 +172,24 @@ pub fn grid_search<const N: usize>(
 
     return search_points(&point_values, f, polling);
 
-    fn search_points<const N: usize>(
-        point_values: &Vec<Vec<f64>>,
-        f: fn(&[f64; N]) -> f64,
+    fn search_points<
+        T: 'static
+            + Copy
+            + Send
+            + Sync
+            + Default
+            + SampleUniform
+            + PartialOrd
+            + AddAssign
+            + Sub<Output = T>
+            + Div<Output = T>
+            + num::FromPrimitive,
+        const N: usize,
+    >(
+        point_values: &Vec<Vec<T>>,
+        f: fn(&[T; N]) -> f64,
         polling: Option<u64>,
-    ) -> [f64; N] {
+    ) -> [T; N] {
         let mut start = [Default::default(); N];
         for (s, p) in start.iter_mut().zip(point_values.iter()) {
             *s = p[0];
@@ -160,13 +197,26 @@ pub fn grid_search<const N: usize>(
         let (_, params) = thread_search(point_values, f, start, 0, polling);
         return params;
     }
-    fn thread_search<const N: usize>(
-        point_values: &Vec<Vec<f64>>,
-        f: fn(&[f64; N]) -> f64,
-        mut point: [f64; N],
+    fn thread_search<
+        T: 'static
+            + Copy
+            + Send
+            + Sync
+            + Default
+            + SampleUniform
+            + PartialOrd
+            + AddAssign
+            + Sub<Output = T>
+            + Div<Output = T>
+            + num::FromPrimitive,
+        const N: usize,
+    >(
+        point_values: &Vec<Vec<T>>,
+        f: fn(&[T; N]) -> f64,
+        mut point: [T; N],
         index: usize,
         polling: Option<u64>,
-    ) -> (f64, [f64; N]) {
+    ) -> (f64, [T; N]) {
         if index == point_values.len() - 1 {
             return (f(&point), point);
         }
@@ -206,13 +256,26 @@ pub fn grid_search<const N: usize>(
                 });
         return (value, params);
     }
-    fn search<const N: usize>(
-        point_values: &Vec<Vec<f64>>,
-        f: fn(&[f64; N]) -> f64,
-        mut point: [f64; N],
+    fn search<
+        T: 'static
+            + Copy
+            + Send
+            + Sync
+            + Default
+            + SampleUniform
+            + PartialOrd
+            + AddAssign
+            + Sub<Output = T>
+            + Div<Output = T>
+            + num::FromPrimitive,
+        const N: usize,
+    >(
+        point_values: &Vec<Vec<T>>,
+        f: fn(&[T; N]) -> f64,
+        mut point: [T; N],
         index: usize,
         counter: Arc<AtomicUsize>,
-    ) -> (f64, [f64; N]) {
+    ) -> (f64, [T; N]) {
         if index == point_values.len() {
             // panic!("hit here");
             counter.fetch_add(1, Ordering::SeqCst);
