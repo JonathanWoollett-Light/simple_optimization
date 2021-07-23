@@ -14,6 +14,7 @@ fn small_random_search() {
         1000, // thousand
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn medium_random_search() {
@@ -21,6 +22,7 @@ fn medium_random_search() {
         1000000, // million
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn big_random_search() {
@@ -28,6 +30,7 @@ fn big_random_search() {
         1000000000, // billion
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn small_grid_search() {
@@ -35,6 +38,7 @@ fn small_grid_search() {
         [10, 10, 10], // 10^3 = 1,000 = thousand
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn medium_grid_search() {
@@ -42,6 +46,7 @@ fn medium_grid_search() {
         [100, 100, 100], // 100^3 = 1,000,000 = million
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn deep_big_grid_search() {
@@ -49,6 +54,7 @@ fn deep_big_grid_search() {
         [1000, 1000, 1000], // 1000^3 =  billion
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
     );
 }
 fn wide_big_grid_search() {
@@ -66,6 +72,7 @@ fn wide_big_grid_search() {
             0f64..1f64,
         ],
         wider_simple_function,
+        None,
     );
 }
 fn huge_grid_search() {
@@ -73,6 +80,7 @@ fn huge_grid_search() {
         [100, 100, 100, 100, 100], // 100^5 = 10 billion
         [0f64..1f64, 0f64..1f64, 0f64..1f64, 0f64..1f64, 0f64..1f64],
         middle_simple_function,
+        None,
     );
 }
 

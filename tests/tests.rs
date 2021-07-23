@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     // For random element we want to reruns tests a few times.
-    const CHECK_ITERATIONS: usize = 1000;
+    const CHECK_ITERATIONS: usize = 100;
 
     fn simple_function(list: &[f64; 3]) -> f64 {
         list.iter().sum()
@@ -23,6 +23,7 @@ mod tests {
                 2000,
                 [0f64..10f64, 5f64..15f64, 10f64..20f64],
                 simple_function,
+                None,
             );
             assert!(best[0] < ALLOWANCE);
             assert!(best[1] < 5. + ALLOWANCE);
@@ -42,6 +43,7 @@ mod tests {
                     20f64..30f64,
                 ],
                 moderate_function,
+                None,
             );
             println!("best: ({}) {:.?}", moderate_function(&best), best);
             assert!(moderate_function(&best) < -530000.);
@@ -54,6 +56,7 @@ mod tests {
             [10, 10, 10],
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             simple_function,
+            None,
         );
         assert!(best == [1., 6., 11.]);
     }
