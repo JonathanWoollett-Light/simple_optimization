@@ -9,6 +9,9 @@ fn middle_simple_function(list: &[f64; 5]) -> f64 {
 fn wider_simple_function(list: &[f64; 9]) -> f64 {
     list.iter().sum()
 }
+fn complex_u8_function(list: &[u8; 4]) -> f64 {
+    (((list[0] as f64).powf(list[1] as f64)).sin() * list[2] as f64) + list[3] as f64
+}
 fn small_random_search() {
     let _best = simple_optimization::random_search(
         1000, // thousand
@@ -84,21 +87,37 @@ fn huge_grid_search() {
     );
 }
 
+fn big_simulated_annealing() {
+    let _best = simple_optimization::simulated_annealing(
+        [0..100, 0..100, 0..100, 0..100],
+        complex_u8_function,
+        1000.,
+        1.,
+        simple_optimization::CoolingSchedule::Exponential(0.95),
+        1.,
+        3000,
+        None,
+    );
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("small_random_search", |b| b.iter(|| small_random_search()));
-    c.bench_function("medium_random_search", |b| {
-        b.iter(|| medium_random_search())
+    // c.bench_function("small_random_search", |b| b.iter(|| small_random_search()));
+    // c.bench_function("medium_random_search", |b| {
+    //     b.iter(|| medium_random_search())
+    // });
+    // c.bench_function("big_random_search", |b| b.iter(|| big_random_search()));
+    // c.bench_function("small_grid_search", |b| b.iter(|| small_grid_search()));
+    // c.bench_function("medium_grid_search", |b| b.iter(|| medium_grid_search()));
+    // c.bench_function("deep_big_grid_search", |b| {
+    //     b.iter(|| deep_big_grid_search())
+    // });
+    // c.bench_function("wide_big_grid_search", |b| {
+    //     b.iter(|| wide_big_grid_search())
+    // });
+    // c.bench_function("huge_grid_search", |b| b.iter(|| huge_grid_search()));
+    c.bench_function("big_simulated_annealing", |b| {
+        b.iter(|| big_simulated_annealing())
     });
-    c.bench_function("big_random_search", |b| b.iter(|| big_random_search()));
-    c.bench_function("small_grid_search", |b| b.iter(|| small_grid_search()));
-    c.bench_function("medium_grid_search", |b| b.iter(|| medium_grid_search()));
-    c.bench_function("deep_big_grid_search", |b| {
-        b.iter(|| deep_big_grid_search())
-    });
-    c.bench_function("wide_big_grid_search", |b| {
-        b.iter(|| wide_big_grid_search())
-    });
-    c.bench_function("huge_grid_search", |b| b.iter(|| huge_grid_search()));
 }
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);

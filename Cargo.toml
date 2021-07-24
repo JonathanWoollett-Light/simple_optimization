@@ -14,10 +14,11 @@ readme = "README.md"
 
 [dependencies]
 rand = "0.8.4"
-itertools = "0.10.1" # izip!
-num_cpus = "1.13.0"
-print_duration = "1.0.0"
-num = "0.4.0"
+itertools = "0.10.1" # izip! AND Using `.fold_while(()` for calculating steps of fast cooling schedule in simulated annealing
+num_cpus = "1.13.0" # Multi-threading
+print_duration = "1.0.0" # Printing progress
+num = "0.4.0" # Generics
+rand_distr = "0.4.1" # Normal distribution
 
 # benchmarks
 [dev-dependencies]
