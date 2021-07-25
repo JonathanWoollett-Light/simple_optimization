@@ -3,41 +3,51 @@ mod tests {
     // For random element we want to reruns tests a few times.
     const CHECK_ITERATIONS: usize = 100;
 
-    fn simple_function_u8(list: &[u8; 3]) -> f64 {
-        list.iter().map(|u| *u as u16).sum::<u16>() as f64
-    }
     fn simple_function(list: &[f64; 3]) -> f64 {
         list.iter().sum()
     }
-    #[rustfmt::skip]
-    fn moderate_function(list: &[f64; 5]) -> f64 {
-        125. * list[0].cos() - 
-        list[1].powf(2.5) + 
-        2. * list[2] +
-        0.125 * list[3].powf(-3.5) -
-        13.2 * list[4].powf(3.12)
+    fn complex_function(list: &[f64; 5]) -> f64 {
+        (((list[0]).powf(list[1])).sin() * list[2]) + list[3] / list[4]
+    }
+    fn simple_function_u8(list: &[u8; 3]) -> f64 {
+        list.iter().map(|u| *u as u16).sum::<u16>() as f64
+    }
+    fn complex_function_u8(list: &[u8; 5]) -> f64 {
+        (((list[0] as f64).powf(list[1] as f64)).sin() * list[2] as f64)
+            + list[3] as f64 / list[4] as f64
     }
 
     #[test]
     fn random_search_simple() {
-        const ALLOWANCE: f64 = 2.5;
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                2000,
+                1000,
                 [0f64..10f64, 5f64..15f64, 10f64..20f64],
                 simple_function,
                 None,
+                Some(19.),
             );
-            assert!(best[0] < ALLOWANCE);
-            assert!(best[1] < 5. + ALLOWANCE);
-            assert!(best[2] < 10. + ALLOWANCE);
+            assert!(simple_function(&best) < 19.);
         }
     }
     #[test]
-    fn random_search_moderate() {
+    fn random_search_simple_u8() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                2000,
+                1000,
+                [0..10, 5..15, 10..20],
+                simple_function_u8,
+                None,
+                Some(15.),
+            );
+            assert!(simple_function_u8(&best) < 18.);
+        }
+    }
+    #[test]
+    fn random_search_complex() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::random_search(
+                1000,
                 [
                     0f64..10f64,
                     5f64..15f64,
@@ -45,46 +55,91 @@ mod tests {
                     15f64..25f64,
                     20f64..30f64,
                 ],
-                moderate_function,
+                complex_function,
                 None,
+                Some(19.),
             );
-            println!("best: ({}) {:.?}", moderate_function(&best), best);
-            assert!(moderate_function(&best) < -530000.);
+            assert!(complex_function(&best) < -18.);
         }
     }
     #[test]
-    fn random_search_simple_u8() {
+    fn random_search_complex_u8() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                10000,
-                [0..10, 5..15, 10..20],
-                simple_function_u8,
+                1000,
+                [0..10, 5..15, 10..20, 15..25, 20..30],
+                complex_function_u8,
                 None,
+                Some(19.),
             );
-            assert_eq!(best[0], 0);
-            assert_eq!(best[1], 5);
-            assert_eq!(best[2], 10);
+            // -17.001623699962504
+            assert!(complex_function_u8(&best) < -17.);
         }
     }
 
     #[test]
-    fn grid_search() {
+    fn grid_search_simple() {
         let best = simple_optimization::grid_search(
             [10, 10, 10],
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             simple_function,
             None,
+            Some(18.),
         );
-        assert!(best == [1., 6., 11.]);
+        assert_eq!(simple_function(&best), 18.);
     }
     #[test]
-    fn grid_search_u8() {
+    fn grid_search_simple_u8() {
         let best = simple_optimization::grid_search(
             [10, 10, 10],
             [0..10, 5..15, 10..20],
             simple_function_u8,
             None,
+            Some(18.),
         );
-        assert!(best == [1, 6, 11]);
+        assert_eq!(simple_function_u8(&best), 18.);
     }
+    #[test]
+    fn grid_search_complex() {
+        let best = simple_optimization::grid_search(
+            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
+            [
+                0f64..10f64,
+                5f64..15f64,
+                10f64..20f64,
+                15f64..25f64,
+                20f64..30f64,
+            ],
+            complex_function,
+            None,
+            Some(19.),
+        );
+        assert!(complex_function(&best) < -19.);
+    }
+    #[test]
+    fn grid_search_complex_u8() {
+        let best = simple_optimization::grid_search(
+            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
+            [0..10, 5..15, 10..20, 15..25, 20..30],
+            complex_function_u8,
+            None,
+            Some(19.),
+        );
+        assert_eq!(complex_function_u8(&best), -17.001623699962504);
+    }
+
+    // #[test]
+    // fn simulated_annealing_simple() {
+    //     let best = simple_optimization::simulated_annealing(
+    //         [0f64..10f64, 5f64..15f64, 10f64..20f64],
+    //         simple_function,
+    //         100.,
+    //         1.,
+    //         simple_optimization::CoolingSchedule::Fast,
+    //         1.,
+    //         10,
+    //         Some(10),
+    //     );
+    //     assert!(simple_function(&best) < 18.);
+    // }
 }
