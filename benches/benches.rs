@@ -1,111 +1,182 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::{thread, time::Duration};
 
 fn simple_function(list: &[f64; 3]) -> f64 {
+    // thread::sleep(Duration::from_millis(25));
     list.iter().sum()
 }
 fn complex_function(list: &[f64; 5]) -> f64 {
+    // thread::sleep(Duration::from_millis(25));
     (((list[0]).powf(list[1])).sin() * list[2]) + list[3] / list[4]
 }
-fn expensive_simple_function(list: &[f64; 3]) -> f64 {
-    thread::sleep(Duration::from_millis(25));
-    simple_function(list)
+// `thread::sleep` except it keeps thread busy
+//  (`thread::sleep` break criterion for some reason)
+// fn thread_wait(duration: std::time::Duration) {
+//     let start = std::time::Instant::now();
+//     while start.elapsed() < duration {}
+// }
+
+// Timeout iterations
+const LIMIT: usize = 1000000; // 1 million
+const GRID_SIMPLE_LIMIT: u32 = 100; // LIMIT.powf(1. / 3.);
+const GRID_COMPLEX_LIMIT: u32 = 15; // LIMIT.powf(1. / 5.);
+const SIMULATED_ANNEALING_LIMIT: (f64,f64,u32) = (100.,1.,1000); // = 100 * 10000
+
+const SIMPLE_EXIT: f64 = 18.;
+const COMPLEX_EXIT: f64 = -17.;
+
+const BIG_LIMIT: usize = 10000000; // 10 million
+const GRID_BIG_LIMIT: u32 = 215; // BIG_LIMIT.powf(1. / 3.);
+
+// Random search
+// ---------------------------------------
+fn random_search_simple_function() {
+    let _best = simple_optimization::random_search(
+        LIMIT,
+        [0f64..10f64, 5f64..15f64, 10f64..20f64],
+        simple_function,
+        None,
+        Some(SIMPLE_EXIT),
+    );
 }
-fn expensive_complex_function(list: &[f64; 5]) -> f64 {
-    thread::sleep(Duration::from_millis(25));
-    complex_function(list)
+fn random_search_complex_function() {
+    let _best = simple_optimization::random_search(
+        LIMIT,
+        [
+            0f64..10f64,
+            5f64..15f64,
+            10f64..20f64,
+            25f64..35f64,
+            30f64..40f64,
+        ],
+        complex_function,
+        None,
+        Some(COMPLEX_EXIT),
+    );
+}
+fn random_search_big() {
+    let _best = simple_optimization::random_search(
+        BIG_LIMIT, // billion
+        [0f64..1f64, 0f64..1f64, 0f64..1f64],
+        simple_function,
+        None,
+        None,
+    );
 }
 
-fn small_random_search() {
-    let _best = simple_optimization::random_search(
-        1000, // thousand
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
-        simple_function,
-        None,
-    );
-}
-fn medium_random_search() {
-    let _best = simple_optimization::random_search(
-        1000000, // million
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
-        simple_function,
-        None,
-    );
-}
-fn big_random_search() {
-    let _best = simple_optimization::random_search(
-        1000000000, // billion
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
-        simple_function,
-        None,
-    );
-}
-fn small_grid_search() {
+// Grid search
+// ---------------------------------------
+fn grid_search_simple_function() {
     let _best = simple_optimization::grid_search(
-        [10, 10, 10], // 10^3 = 1,000 = thousand
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
+        [GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT],
+        [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
+        Some(SIMPLE_EXIT),
     );
 }
-fn medium_grid_search() {
+fn grid_search_complex_function() {
     let _best = simple_optimization::grid_search(
-        [100, 100, 100], // 100^3 = 1,000,000 = million
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
-        simple_function,
-        None,
-    );
-}
-fn deep_big_grid_search() {
-    let _best = simple_optimization::grid_search(
-        [1000, 1000, 1000], // 1000^3 =  billion
-        [0f64..1f64, 0f64..1f64, 0f64..1f64],
-        simple_function,
-        None,
-    );
-}
-fn wide_big_grid_search() {
-    let _best = simple_optimization::grid_search(
-        [10, 10, 10, 10, 10, 10, 10, 10, 10], // 10^9 = billion
         [
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
-            0f64..1f64,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
         ],
-        wider_simple_function,
+        [
+            0f64..10f64,
+            5f64..15f64,
+            10f64..20f64,
+            25f64..35f64,
+            30f64..40f64,
+        ],
+        complex_function,
+        None,
+        Some(COMPLEX_EXIT),
+    );
+}
+fn grid_search_big() {
+    let _best = simple_optimization::grid_search(
+        [GRID_BIG_LIMIT, GRID_BIG_LIMIT, GRID_BIG_LIMIT],
+        [0f64..1f64, 0f64..1f64, 0f64..1f64],
+        simple_function,
+        None,
         None,
     );
 }
-fn huge_grid_search() {
-    let _best = simple_optimization::grid_search(
-        [100, 100, 100, 100, 100], // 100^5 = 10 billion
-        [0f64..1f64, 0f64..1f64, 0f64..1f64, 0f64..1f64, 0f64..1f64],
-        middle_simple_function,
+
+// Simulated annealing
+// ---------------------------------------
+fn simulated_annealing_simple_function() {
+    let _best = simple_optimization::simulated_annealing(
+        [0f64..10f64, 5f64..15f64, 10f64..20f64],
+        simple_function,
+        SIMULATED_ANNEALING_LIMIT.0,
+        SIMULATED_ANNEALING_LIMIT.1,
+        simple_optimization::CoolingSchedule::Fast,
+        1.,
+        SIMULATED_ANNEALING_LIMIT.2,
+        None,
+        Some(SIMPLE_EXIT),
+    );
+}
+fn simulated_annealing_complex_function() {
+    let _best = simple_optimization::simulated_annealing(
+        [
+            0f64..10f64,
+            5f64..15f64,
+            10f64..20f64,
+            25f64..35f64,
+            30f64..40f64,
+        ],
+        complex_function,
+        SIMULATED_ANNEALING_LIMIT.0,
+        SIMULATED_ANNEALING_LIMIT.1,
+        simple_optimization::CoolingSchedule::Fast,
+        1.,
+        SIMULATED_ANNEALING_LIMIT.2,
+        None,
+        Some(COMPLEX_EXIT),
+    );
+}
+fn simulated_annealing_big() {
+    let _best = simple_optimization::simulated_annealing(
+        [0f64..1f64, 0f64..1f64, 0f64..1f64],
+        simple_function,
+        100.,
+        1.,
+        simple_optimization::CoolingSchedule::Fast,
+        1.,
+        100000,
+        None,
         None,
     );
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("small_random_search", |b| b.iter(|| small_random_search()));
-    c.bench_function("medium_random_search", |b| {
-        b.iter(|| medium_random_search())
+    c.bench_function("random_search_simple_function", |b| {
+        b.iter(|| random_search_simple_function())
     });
-    c.bench_function("big_random_search", |b| b.iter(|| big_random_search()));
-    c.bench_function("small_grid_search", |b| b.iter(|| small_grid_search()));
-    c.bench_function("medium_grid_search", |b| b.iter(|| medium_grid_search()));
-    c.bench_function("deep_big_grid_search", |b| {
-        b.iter(|| deep_big_grid_search())
+    c.bench_function("random_search_complex_function", |b| {
+        b.iter(|| random_search_complex_function())
     });
-    c.bench_function("wide_big_grid_search", |b| {
-        b.iter(|| wide_big_grid_search())
+    c.bench_function("random_search_big", |b| b.iter(|| random_search_big()));
+    c.bench_function("grid_search_simple_function", |b| {
+        b.iter(|| grid_search_simple_function())
     });
-    c.bench_function("huge_grid_search", |b| b.iter(|| huge_grid_search()));
+    c.bench_function("grid_search_complex_function", |b| {
+        b.iter(|| grid_search_complex_function())
+    });
+    c.bench_function("grid_search_big", |b| b.iter(|| grid_search_big()));
+    c.bench_function("simulated_annealing_simple_function", |b| {
+        b.iter(|| simulated_annealing_simple_function())
+    });
+    c.bench_function("simulated_annealing_complex_function", |b| {
+        b.iter(|| simulated_annealing_complex_function())
+    });
+    c.bench_function("simulated_annealing_big", |b| {
+        b.iter(|| simulated_annealing_big())
+    });
 }
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);

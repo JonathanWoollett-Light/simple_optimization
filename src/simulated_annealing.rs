@@ -1,22 +1,15 @@
-use itertools::Itertools;
-use itertools::{
-    izip,
-    FoldWhile::{Continue, Done},
-};
-use print_duration::print_duration;
-use rand::{distributions::uniform::SampleUniform, thread_rng, Rng, RngCore};
-use rand_distr::{Distribution, Normal, NormalError};
+use itertools::izip;
+use rand::{distributions::uniform::SampleUniform, thread_rng, Rng};
+use rand_distr::{Distribution, Normal};
 
 use std::{
-    cmp, f64,
-    io::{stdout, Write},
-    ops::{AddAssign, Div, Range, Sub},
+    f64,
+    ops::{Range, Sub},
     sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc, Mutex,
     },
     thread,
-    time::{Duration, Instant},
 };
 
 use crate::util::poll;
@@ -45,6 +38,7 @@ impl CoolingSchedule {
     }
 }
 
+// TODO Multi-thread this
 /// Simulated annealing
 pub fn simulated_annealing<
     T: 'static
@@ -67,7 +61,7 @@ pub fn simulated_annealing<
     variance: f64,
     samples_per_temperature: u32,
     polling: Option<u64>,
-    exit: Option<f64>,
+    early_exit_minimum: Option<f64>,
 ) -> [T; N] {
     let mut rng = thread_rng();
     // Get initial point
@@ -97,14 +91,26 @@ pub fn simulated_annealing<
     let counter = Arc::new(AtomicUsize::new(0));
 
     let counter_clone = counter.clone();
-    let handle = thread::spawn(move || {
-        poll(
-            polling.unwrap(),
-            vec![counter_clone],
-            0,
-            iterations as usize,
-        )
-    });
+    let thread_best = Arc::new(Mutex::new(f64::MAX));
+    let thread_exit = Arc::new(AtomicBool::new(false));
+
+    let handle = if let Some(poll_rate) = polling {
+        let thread_best_clone = thread_best.clone();
+        let thread_exit_clone = thread_exit.clone();
+        Some(thread::spawn(move || {
+            poll(
+                poll_rate,
+                vec![counter_clone],
+                0,
+                iterations as usize,
+                early_exit_minimum,
+                vec![thread_best_clone],
+                thread_exit_clone,
+            )
+        }))
+    } else {
+        None
+    };
 
     let mut step = 1;
     let mut temperature = starting_temperature;
@@ -116,6 +122,7 @@ pub fn simulated_annealing<
             .zip(current_point.iter())
             .map(|(v, p)| Normal::new(p.to_f64().unwrap(), *v).unwrap())
             .collect();
+
         for _ in 0..samples_per_temperature {
             // Samples new point
             let mut point = [Default::default(); N];
@@ -139,19 +146,20 @@ pub fn simulated_annealing<
                 if current_value < best_value {
                     best_point = current_point;
                     best_value = current_value;
-                    if let Some(exit_value) = exit {
-                        if best_value < exit_value {
-                            return best_point;
-                        }
-                    }
+                    *thread_best.lock().unwrap() = best_value;
                 }
             }
+            if thread_exit.load(Ordering::SeqCst) {
+                return best_point;
+            }
+            counter.fetch_add(1, Ordering::SeqCst);
         }
         temperature = cooling_schedule.decay(starting_temperature, temperature, step);
-        // println!("temperature: {}",temperature);
     }
 
-    handle.join().unwrap();
+    if let Some(h) = handle {
+        h.join().unwrap();
+    }
 
     return best_point;
 

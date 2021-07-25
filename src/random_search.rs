@@ -57,7 +57,7 @@ pub fn random_search<
     );
 
     let thread_exit = Arc::new(AtomicBool::new(false));
-    // (handles,counters)
+    // (handles,(counters,thread_bests))
     let (handles, links): (Vec<_>, Vec<(Arc<AtomicUsize>, Arc<Mutex<f64>>)>) = (0..cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
@@ -120,7 +120,7 @@ pub fn random_search<
         f: fn(&[T; N]) -> f64,
         counter: Arc<AtomicUsize>,
         best: Arc<Mutex<f64>>,
-        thred_exit: Arc<AtomicBool>,
+        thread_exit: Arc<AtomicBool>,
     ) -> (f64, [T; N]) {
         let mut rng = thread_rng();
         let mut params = [Default::default(); N];
@@ -141,7 +141,7 @@ pub fn random_search<
                 *best.lock().unwrap() = best_value;
             }
             counter.fetch_add(1, Ordering::SeqCst);
-            if thred_exit.load(Ordering::SeqCst) {
+            if thread_exit.load(Ordering::SeqCst) {
                 break;
             }
         }

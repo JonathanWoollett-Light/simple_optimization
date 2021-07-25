@@ -17,6 +17,8 @@ mod tests {
             + list[3] as f64 / list[4] as f64
     }
 
+    // Random search
+    // ---------------------------------------
     #[test]
     fn random_search_simple() {
         for _ in 0..CHECK_ITERATIONS {
@@ -57,7 +59,7 @@ mod tests {
                 ],
                 complex_function,
                 None,
-                Some(19.),
+                Some(-18.),
             );
             assert!(complex_function(&best) < -18.);
         }
@@ -70,13 +72,15 @@ mod tests {
                 [0..10, 5..15, 10..20, 15..25, 20..30],
                 complex_function_u8,
                 None,
-                Some(19.),
+                Some(-17.),
             );
             // -17.001623699962504
             assert!(complex_function_u8(&best) < -17.);
         }
     }
 
+    // Grid search
+    // ---------------------------------------
     #[test]
     fn grid_search_simple() {
         let best = simple_optimization::grid_search(
@@ -112,7 +116,7 @@ mod tests {
             ],
             complex_function,
             None,
-            Some(19.),
+            Some(-19.),
         );
         assert!(complex_function(&best) < -19.);
     }
@@ -123,23 +127,85 @@ mod tests {
             [0..10, 5..15, 10..20, 15..25, 20..30],
             complex_function_u8,
             None,
-            Some(19.),
+            Some(-17.001623699962504),
         );
         assert_eq!(complex_function_u8(&best), -17.001623699962504);
     }
 
-    // #[test]
-    // fn simulated_annealing_simple() {
-    //     let best = simple_optimization::simulated_annealing(
-    //         [0f64..10f64, 5f64..15f64, 10f64..20f64],
-    //         simple_function,
-    //         100.,
-    //         1.,
-    //         simple_optimization::CoolingSchedule::Fast,
-    //         1.,
-    //         10,
-    //         Some(10),
-    //     );
-    //     assert!(simple_function(&best) < 18.);
-    // }
+    // Simulated annealing
+    // ---------------------------------------
+    #[test]
+    fn simulated_annealing_simple() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::simulated_annealing(
+                [0f64..10f64, 5f64..15f64, 10f64..20f64],
+                simple_function,
+                100.,
+                1.,
+                simple_optimization::CoolingSchedule::Fast,
+                1.,
+                10,
+                None,
+                Some(17.),
+            );
+            assert!(simple_function(&best) < 19.);
+        }
+    }
+    #[test]
+    fn simulated_annealing_simple_u8() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::simulated_annealing(
+                [0..10, 5..15, 10..20],
+                simple_function_u8,
+                100.,
+                1.,
+                simple_optimization::CoolingSchedule::Fast,
+                1.,
+                10,
+                None,
+                Some(16.),
+            );
+            assert!(simple_function_u8(&best) < 18.);
+        }
+    }
+    #[test]
+    fn simulated_annealing_complex() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::simulated_annealing(
+                [
+                    0f64..10f64,
+                    5f64..15f64,
+                    10f64..20f64,
+                    15f64..25f64,
+                    20f64..30f64,
+                ],
+                complex_function,
+                100.,
+                1.,
+                simple_optimization::CoolingSchedule::Fast,
+                1.,
+                10,
+                None,
+                Some(-20.),
+            );
+            assert!(complex_function(&best) < -17.);
+        }
+    }
+    #[test]
+    fn simulated_annealing_complex_u8() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::simulated_annealing(
+                [0..10, 5..15, 10..20, 15..25, 20..30],
+                complex_function_u8,
+                100.,
+                1.,
+                simple_optimization::CoolingSchedule::Fast,
+                1.,
+                10,
+                None,
+                Some(-19.),
+            );
+            assert!(complex_function_u8(&best) < -17.);
+        }
+    }
 }

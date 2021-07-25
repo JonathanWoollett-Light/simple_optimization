@@ -48,6 +48,7 @@ pub fn poll(
                 for best in thread_bests.iter() {
                     if *best.lock().unwrap() <= early_exit {
                         thread_exit.store(true, Ordering::SeqCst);
+                        println!();
                         return;
                     }
                 }
