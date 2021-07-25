@@ -31,7 +31,9 @@ pub fn poll(
     // let mut i = 0;
     while count < iterations {
         let percent = count as f32 / iterations as f32;
-        let remaining_time_estimate = start.elapsed().div_f32(percent);
+        
+        // If count == 0, give 00... for remaining time as placeholder
+        let remaining_time_estimate = if count == 0 { Duration::new(0,0) } else { start.elapsed().div_f32(percent) };
         print!(
             "\r{:20} ({:.2}%) {} / {}",
             count,
