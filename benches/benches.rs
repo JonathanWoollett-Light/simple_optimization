@@ -16,7 +16,7 @@ fn complex_function(list: &[f64; 5]) -> f64 {
 // }
 
 // Timeout iterations
-const LIMIT: usize = 1000000; // 1 million
+const LIMIT: u32 = 1000000; // 1 million
 const GRID_SIMPLE_LIMIT: u32 = 100; // LIMIT.powf(1. / 3.);
 const GRID_COMPLEX_LIMIT: u32 = 15; // LIMIT.powf(1. / 5.);
 const SIMULATED_ANNEALING_LIMIT: (f64,f64,u32) = (100.,1.,1000); // = 100 * 10000
@@ -24,7 +24,7 @@ const SIMULATED_ANNEALING_LIMIT: (f64,f64,u32) = (100.,1.,1000); // = 100 * 1000
 const SIMPLE_EXIT: f64 = 18.;
 const COMPLEX_EXIT: f64 = -17.;
 
-const BIG_LIMIT: usize = 10000000; // 10 million
+const BIG_LIMIT: u32 = 10000000; // 10 million
 const GRID_BIG_LIMIT: u32 = 215; // BIG_LIMIT.powf(1. / 3.);
 
 // Random search

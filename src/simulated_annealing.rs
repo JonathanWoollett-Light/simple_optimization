@@ -6,7 +6,7 @@ use std::{
     f64,
     ops::{Range, Sub},
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU32, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -88,7 +88,7 @@ pub fn simulated_annealing<
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);
     let iterations = steps * samples_per_temperature;
-    let counter = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     let counter_clone = counter.clone();
     let thread_best = Arc::new(Mutex::new(f64::MAX));
@@ -102,7 +102,7 @@ pub fn simulated_annealing<
                 poll_rate,
                 vec![counter_clone],
                 0,
-                iterations as usize,
+                iterations,
                 early_exit_minimum,
                 vec![thread_best_clone],
                 thread_exit_clone,
@@ -115,14 +115,12 @@ pub fn simulated_annealing<
     let mut step = 1;
     let mut temperature = starting_temperature;
     while temperature >= minimum_temperature {
-        step += 1;
         // Distributions to sample from at this temperature.
         let distributions: Vec<Normal<f64>> = scaled_variances
             .iter()
             .zip(current_point.iter())
             .map(|(v, p)| Normal::new(p.to_f64().unwrap(), *v).unwrap())
             .collect();
-
         for _ in 0..samples_per_temperature {
             // Samples new point
             let mut point = [Default::default(); N];
@@ -152,15 +150,16 @@ pub fn simulated_annealing<
             if thread_exit.load(Ordering::SeqCst) {
                 return best_point;
             }
-            counter.fetch_add(1, Ordering::SeqCst);
+            
         }
+        step += 1;
         temperature = cooling_schedule.decay(starting_temperature, temperature, step);
     }
 
     if let Some(h) = handle {
         h.join().unwrap();
     }
-
+    println!();
     return best_point;
 
     // Samples until value in range

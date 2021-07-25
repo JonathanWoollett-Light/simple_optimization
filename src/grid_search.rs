@@ -4,7 +4,7 @@ use std::{
     f64,
     ops::{AddAssign, Div, Range, Sub},
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU32, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -99,12 +99,12 @@ pub fn grid_search<
 
         let thread_exit = Arc::new(AtomicBool::new(false));
         // (handles,counters)
-        let (handles, links): (Vec<_>, Vec<(Arc<AtomicUsize>, Arc<Mutex<f64>>)>) = point_values[0]
+        let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = point_values[0]
             .iter()
             .map(|p_value| {
                 point[0] = *p_value;
                 let point_values_clone = point_values.clone();
-                let counter = Arc::new(AtomicUsize::new(0));
+                let counter = Arc::new(AtomicU32::new(0));
                 let thread_best = Arc::new(Mutex::new(f64::MAX));
 
                 let counter_clone = counter.clone();
@@ -126,11 +126,11 @@ pub fn grid_search<
                 )
             })
             .unzip();
-        let (counters, thread_bests): (Vec<Arc<AtomicUsize>>, Vec<Arc<Mutex<f64>>>) =
+        let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
             links.into_iter().unzip();
 
         if let Some(poll_rate) = polling {
-            let iterations = point_values.iter().map(|pvs| pvs.len()).product();
+            let iterations = point_values.iter().map(|pvs| pvs.len() as u32).product();
             poll(
                 poll_rate,
                 counters,
@@ -173,7 +173,7 @@ pub fn grid_search<
         f: fn(&[T; N]) -> f64,
         mut point: [T; N],
         index: usize,
-        counter: Arc<AtomicUsize>,
+        counter: Arc<AtomicU32>,
         best: Arc<Mutex<f64>>,
         thred_exit: Arc<AtomicBool>,
     ) -> (f64, [T; N]) {
