@@ -19,23 +19,27 @@ use crate::util::poll;
 /// And every 10ms print progress.
 /// ```
 /// use simple_optimization::random_search;
-/// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
+/// use std::sync::Arc;
+/// fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
 /// let best = simple_optimization::random_search(
 ///     1000,
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
 ///     simple_function,
 ///     None,
+///     None,
 ///     Some(19.)
 /// );
-// assert!(simple_function(&best) < 19.);
+// assert!(simple_function(&best, None) < 19.);
 /// ```
 pub fn random_search<
+    A: 'static + Send + Sync,
     T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
     const N: usize,
 >(
     iterations: u32,
     ranges: [Range<T>; N],
-    f: fn(&[T; N]) -> f64,
+    f: fn(&[T; N], Option<Arc<A>>) -> f64,
+    evaluation_data: Option<Arc<A>>,
     polling: Option<u64>,
     early_exit_minimum: Option<f64>,
 ) -> [T; N] {
@@ -50,6 +54,7 @@ pub fn random_search<
         remainder,
         ranges_arc.clone(),
         f,
+        evaluation_data.clone(),
         // Since we are doing this on the same thread, we don't need to use these
         Arc::new(AtomicU32::new(Default::default())),
         Arc::new(Mutex::new(Default::default())),
@@ -67,12 +72,14 @@ pub fn random_search<
             let counter_clone = counter.clone();
             let thread_best_clone = thread_best.clone();
             let thread_exit_clone = thread_exit.clone();
+            let evaluation_data_clone = evaluation_data.clone();
             (
                 thread::spawn(move || {
                     search(
                         per,
                         ranges_clone,
                         f,
+                        evaluation_data_clone,
                         counter_clone,
                         thread_best_clone,
                         thread_exit_clone,
@@ -112,12 +119,14 @@ pub fn random_search<
     return best_params;
 
     fn search<
+        A: 'static + Send + Sync,
         T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
         const N: usize,
     >(
         iterations: u32,
         ranges: Arc<[Range<T>; N]>,
-        f: fn(&[T; N]) -> f64,
+        f: fn(&[T; N], Option<Arc<A>>) -> f64,
+        evaluation_data: Option<Arc<A>>,
         counter: Arc<AtomicU32>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
@@ -133,7 +142,7 @@ pub fn random_search<
                 *param = rng.gen_range(range.clone());
             }
             // Run function
-            let new_value = f(&params);
+            let new_value = f(&params, evaluation_data.clone());
             // Check best
             if new_value < best_value {
                 best_value = new_value;

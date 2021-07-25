@@ -16,17 +16,20 @@ use crate::util::poll;
 ///
 /// ```
 /// use simple_optimization::grid_search;
-/// fn simple_function(list: &[f64; 3]) -> f64 { list.iter().sum() }
+/// use std::sync::Arc;
+/// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
 /// let best = grid_search(
 ///     [10,10,10],
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
 ///     simple_function,
+///     None,
 ///     Some(10),
-///     Some(18.)
+///     Some(15.)
 /// );
-/// assert_eq!(simple_function(&best), 18.);
+/// assert_eq!(simple_function(&best, None), 15.);
 /// ```
 pub fn grid_search<
+    A: 'static + Send + Sync,
     T: 'static
         + Copy
         + Send
@@ -42,7 +45,8 @@ pub fn grid_search<
 >(
     points: [u32; N],
     ranges: [Range<T>; N],
-    f: fn(&[T; N]) -> f64,
+    f: fn(&[T; N], Option<Arc<A>>) -> f64,
+    evaluation_data: Option<Arc<A>>,
     polling: Option<u64>,
     early_exit_minimum: Option<f64>,
 ) -> [T; N] {
@@ -57,8 +61,10 @@ pub fn grid_search<
         .map(|(r, k, s)| {
             (0..*k)
                 .scan(r.start, |state, _| {
+                    // Do this so the first value is `r.start` instead of `r.start+s` and the last value is `r.end-s` instead of r.end`.
+                    let prev_state = *state;
                     *state += *s;
-                    Some(*state)
+                    Some(prev_state)
                 })
                 .collect()
         })
@@ -69,10 +75,18 @@ pub fn grid_search<
     for (s, p) in start.iter_mut().zip(point_values.iter()) {
         *s = p[0];
     }
-    let (_, params) = thread_search(&point_values, f, start, polling, early_exit_minimum);
+    let (_, params) = thread_search(
+        &point_values,
+        f,
+        evaluation_data,
+        start,
+        polling,
+        early_exit_minimum,
+    );
     return params;
 
     fn thread_search<
+        A: 'static + Send + Sync,
         T: 'static
             + Copy
             + Send
@@ -87,14 +101,15 @@ pub fn grid_search<
         const N: usize,
     >(
         point_values: &Vec<Vec<T>>,
-        f: fn(&[T; N]) -> f64,
+        f: fn(&[T; N], Option<Arc<A>>) -> f64,
+        evaluation_data: Option<Arc<A>>,
         mut point: [T; N],
         polling: Option<u64>,
         early_exit_minimum: Option<f64>,
     ) -> (f64, [T; N]) {
         // Could just `assert!(N>0)` and not handle it, but this handles it fine.
         if 0 == point_values.len() {
-            return (f(&point), point);
+            return (f(&point, evaluation_data), point);
         }
 
         let thread_exit = Arc::new(AtomicBool::new(false));
@@ -110,11 +125,13 @@ pub fn grid_search<
                 let counter_clone = counter.clone();
                 let thread_best_clone = thread_best.clone();
                 let thread_exit_clone = thread_exit.clone();
+                let evaluation_data_clone = evaluation_data.clone();
                 (
                     thread::spawn(move || {
                         search(
                             &point_values_clone,
                             f,
+                            evaluation_data_clone,
                             point,
                             1,
                             counter_clone,
@@ -156,6 +173,7 @@ pub fn grid_search<
         return (value, params);
     }
     fn search<
+        A: 'static + Send + Sync,
         T: 'static
             + Copy
             + Send
@@ -170,17 +188,18 @@ pub fn grid_search<
         const N: usize,
     >(
         point_values: &Vec<Vec<T>>,
-        f: fn(&[T; N]) -> f64,
+        f: fn(&[T; N], Option<Arc<A>>) -> f64,
+        evaluation_data: Option<Arc<A>>,
         mut point: [T; N],
         index: usize,
         counter: Arc<AtomicU32>,
         best: Arc<Mutex<f64>>,
-        thred_exit: Arc<AtomicBool>,
+        thread_exit: Arc<AtomicBool>,
     ) -> (f64, [T; N]) {
         if index == point_values.len() {
             // panic!("hit here");
             counter.fetch_add(1, Ordering::SeqCst);
-            return (f(&point), point);
+            return (f(&point, evaluation_data), point);
         }
 
         let mut best_value = f64::MAX;
@@ -190,18 +209,19 @@ pub fn grid_search<
             let (value, params) = search(
                 point_values,
                 f,
+                evaluation_data.clone(),
                 point,
                 index + 1,
                 counter.clone(),
                 best.clone(),
-                thred_exit.clone(),
+                thread_exit.clone(),
             );
             if value < best_value {
                 best_value = value;
                 best_params = params;
                 *best.lock().unwrap() = best_value;
             }
-            if thred_exit.load(Ordering::SeqCst) {
+            if thread_exit.load(Ordering::SeqCst) {
                 break;
             }
         }

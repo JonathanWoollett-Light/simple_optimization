@@ -40,7 +40,26 @@ impl CoolingSchedule {
 
 // TODO Multi-thread this
 /// Simulated annealing
+/// ```
+/// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 {
+///  list.iter().sum()
+/// }
+/// let best = simple_optimization::simulated_annealing(
+///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
+///     simple_function,
+///     None,
+///     100.,
+///     1.,
+///     simple_optimization::CoolingSchedule::Fast,
+///     1.,
+///     10,
+///     None,
+///     Some(17.),
+/// );
+/// assert!(simple_function(&best, None) < 19.);
+/// ```
 pub fn simulated_annealing<
+    A: 'static + Send + Sync,
     T: 'static
         + Copy
         + Send
@@ -54,7 +73,8 @@ pub fn simulated_annealing<
     const N: usize,
 >(
     ranges: [Range<T>; N],
-    f: fn(&[T; N]) -> f64,
+    f: fn(&[T; N], Option<Arc<A>>) -> f64,
+    evaluation_data: Option<Arc<A>>,
     starting_temperature: f64,
     minimum_temperature: f64,
     cooling_schedule: CoolingSchedule,
@@ -71,7 +91,7 @@ pub fn simulated_annealing<
     }
     let mut best_point = current_point;
 
-    let mut current_value = f(&best_point);
+    let mut current_value = f(&best_point, evaluation_data.clone());
     let mut best_value = current_value;
 
     // Gets ranges in f64
@@ -127,7 +147,7 @@ pub fn simulated_annealing<
             for (p, r, d) in izip!(point.iter_mut(), f64_ranges.iter(), distributions.iter()) {
                 *p = sample_normal(r, d, &mut rng);
             }
-            let value = f(&point);
+            let value = f(&point, evaluation_data.clone());
             counter.fetch_add(1, Ordering::SeqCst);
 
             let difference = value - current_value;
@@ -150,7 +170,6 @@ pub fn simulated_annealing<
             if thread_exit.load(Ordering::SeqCst) {
                 return best_point;
             }
-            
         }
         step += 1;
         temperature = cooling_schedule.decay(starting_temperature, temperature, step);
@@ -158,8 +177,8 @@ pub fn simulated_annealing<
 
     if let Some(h) = handle {
         h.join().unwrap();
+        println!();
     }
-    println!();
     return best_point;
 
     // Samples until value in range
