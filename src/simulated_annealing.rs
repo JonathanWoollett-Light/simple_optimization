@@ -39,7 +39,7 @@ impl CoolingSchedule {
 }
 
 // TODO Multi-thread this
-/// Simulated annealing
+/// [Simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing)
 /// ```
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 {
 ///  list.iter().sum()

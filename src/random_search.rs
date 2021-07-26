@@ -12,11 +12,9 @@ use std::{
 
 use crate::util::poll;
 
-/// Random search
+/// [Random search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Random_search)
 ///
-/// Randomly pick parameters for `simple_function` in the ranges `0..1`, `1..2`, and `3..4` and return the parameters which produce the minimum result from `simple_function` out of 10,000 samples.
-///
-/// And every 10ms print progress.
+/// Randomly pick parameters for `simple_function` in the ranges `0..5`, `5..15`, and `10..20` and return the parameters which produce the minimum result from `simple_function` out of `10,000` samples, printing progress every `10ms`, and exiting early if a value is found which is less than or equal to `19.`.
 /// ```
 /// use simple_optimization::random_search;
 /// use std::sync::Arc;
@@ -26,10 +24,10 @@ use crate::util::poll;
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
 ///     simple_function,
 ///     None,
-///     None,
+///     Some(10),
 ///     Some(19.)
 /// );
-// assert!(simple_function(&best, None) < 19.);
+/// assert!(simple_function(&best, None) < 19.);
 /// ```
 pub fn random_search<
     A: 'static + Send + Sync,

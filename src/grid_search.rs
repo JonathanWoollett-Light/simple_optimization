@@ -12,8 +12,14 @@ use std::{
 
 use crate::util::poll;
 
-/// Grid search
+/// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
+/// Evaluate all combinations of values from the 3 values where:
+/// - Value 1 covers `10` values at equal intervals from `0..10` (`0,1,2,3,4,5,6,7,8,9`).
+/// - Value 2 covers `10` values at equal intervals from `5..15`.
+/// - Value 3 covers `10` values at equal intervals from `10..20`.
+/// 
+/// Printing progress every `10ms` and exiting early if a value is found which is less than or equal to `15.`.
 /// ```
 /// use simple_optimization::grid_search;
 /// use std::sync::Arc;
