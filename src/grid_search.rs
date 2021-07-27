@@ -18,7 +18,7 @@ use crate::util::poll;
 /// - Value 1 covers `10` values at equal intervals from `0..10` (`0,1,2,3,4,5,6,7,8,9`).
 /// - Value 2 covers `11` values at equal intervals from `5..15`.
 /// - Value 3 covers `12` values at equal intervals from `10..20`.
-/// 
+///
 /// Printing progress every `10ms` and exiting early if a value is found which is less than or equal to `15.`.
 /// ```
 /// use std::sync::Arc;
@@ -29,10 +29,10 @@ use crate::util::poll;
 ///     None, //  No additional evaluation data.
 ///     Some(10), // Print progress every `10ms`.
 ///     Some(15.), // Exit early if `15.` or less is reached.
-///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`) 
+///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.
-///     [10,11,12], 
+///     [10,11,12],
 /// );
 /// assert_eq!(simple_function(&best, None), 15.);
 /// ```

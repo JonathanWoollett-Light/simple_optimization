@@ -171,7 +171,7 @@ mod tests {
                 None,
                 None,
                 Some(-17.),
-                1000
+                1000,
             );
             // -17.001623699962504
             assert!(complex_function_u8(&best, None) < -17.);
@@ -200,7 +200,6 @@ mod tests {
     #[test]
     fn grid_search_simple() {
         let best = simple_optimization::grid_search(
-
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             simple_function,
             None,
@@ -225,7 +224,6 @@ mod tests {
     #[test]
     fn grid_search_complex() {
         let best = simple_optimization::grid_search(
-
             [
                 0f64..10f64,
                 5f64..15f64,
@@ -244,7 +242,6 @@ mod tests {
     #[test]
     fn grid_search_complex_u8() {
         let best = simple_optimization::grid_search(
-
             [0..10, 5..15, 10..20, 15..25, 20..30],
             complex_function_u8,
             None,
@@ -260,7 +257,6 @@ mod tests {
 
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::grid_search(
-
                 [0..255],
                 boundary_function,
                 images.clone(),
@@ -288,7 +284,6 @@ mod tests {
                 simple_optimization::CoolingSchedule::Fast,
                 100,
                 1.,
-                
             );
             assert!(simple_function(&best, None) < 19.);
         }
@@ -307,7 +302,6 @@ mod tests {
                 simple_optimization::CoolingSchedule::Fast,
                 100,
                 1.,
-
             );
             assert!(simple_function_u8(&best, None) < 18.);
         }
@@ -332,7 +326,6 @@ mod tests {
                 simple_optimization::CoolingSchedule::Fast,
                 100,
                 1.,
-
             );
             assert!(complex_function(&best, None) < -17.);
         }
@@ -351,8 +344,6 @@ mod tests {
                 simple_optimization::CoolingSchedule::Fast,
                 100,
                 1.,
-
-
             );
             assert!(complex_function_u8(&best, None) < -17.);
         }

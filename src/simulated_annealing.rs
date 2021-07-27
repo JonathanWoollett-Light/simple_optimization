@@ -3,6 +3,7 @@ use rand::{distributions::uniform::SampleUniform, thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 
 use std::{
+    convert::TryInto,
     f64,
     ops::{Range, Sub},
     sync::{
@@ -10,13 +11,12 @@ use std::{
         Arc, Mutex,
     },
     thread,
-    convert::TryInto
 };
 
 use crate::util::poll;
 
 /// Cooling schedule for simulated annealing.
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub enum CoolingSchedule {
     Logarithmic,
     Exponential(f64),
@@ -60,7 +60,7 @@ impl CoolingSchedule {
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
 ///     // Take `100` samples per temperature
-///     // This is split between threads, so each thread only samples 
+///     // This is split between threads, so each thread only samples
 ///     //  `100/n` at each temperature.
 ///     100,
 ///     1., // Variance in sampling.
@@ -99,7 +99,7 @@ pub fn simulated_annealing<
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);
     let thread_exit = Arc::new(AtomicBool::new(false));
-    let ranges_arc =  Arc::new(ranges);
+    let ranges_arc = Arc::new(ranges);
 
     let remainder = samples_per_temperature % search_cpus;
     let per = samples_per_temperature / search_cpus;
@@ -118,36 +118,38 @@ pub fn simulated_annealing<
         variance,
     );
 
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus).map(|_| {
-        let ranges_clone = ranges_arc.clone();
-        let counter = Arc::new(AtomicU32::new(0));
-        let thread_best = Arc::new(Mutex::new(f64::MAX));
+    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus)
+        .map(|_| {
+            let ranges_clone = ranges_arc.clone();
+            let counter = Arc::new(AtomicU32::new(0));
+            let thread_best = Arc::new(Mutex::new(f64::MAX));
 
-        let counter_clone = counter.clone();
-        let thread_best_clone = thread_best.clone();
-        let thread_exit_clone = thread_exit.clone();
-        let evaluation_data_clone = evaluation_data.clone();
-        (
-            thread::spawn(move || {
-                search(
-                    ranges_clone,
-                    f,
-                    evaluation_data_clone,
-                    counter_clone,
-                    thread_best_clone,
-                    thread_exit_clone,
-                    starting_temperature,
-                    minimum_temperature,
-                    cooling_schedule,
-                    per,
-                    variance,
-                )
-            }),
-            (counter, thread_best),
-        )
-    }).unzip();
+            let counter_clone = counter.clone();
+            let thread_best_clone = thread_best.clone();
+            let thread_exit_clone = thread_exit.clone();
+            let evaluation_data_clone = evaluation_data.clone();
+            (
+                thread::spawn(move || {
+                    search(
+                        ranges_clone,
+                        f,
+                        evaluation_data_clone,
+                        counter_clone,
+                        thread_best_clone,
+                        thread_exit_clone,
+                        starting_temperature,
+                        minimum_temperature,
+                        cooling_schedule,
+                        per,
+                        variance,
+                    )
+                }),
+                (counter, thread_best),
+            )
+        })
+        .unzip();
     let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
-    links.into_iter().unzip();
+        links.into_iter().unzip();
 
     if let Some(poll_rate) = polling {
         poll(
@@ -202,7 +204,6 @@ pub fn simulated_annealing<
         cooling_schedule: CoolingSchedule,
         samples_per_temperature: u32,
         variance: f64,
-
     ) -> (f64, [T; N]) {
         let mut rng = thread_rng();
         // Get initial point
@@ -211,20 +212,20 @@ pub fn simulated_annealing<
             *p = rng.gen_range(r.clone());
         }
         let mut best_point = current_point;
-    
+
         let mut current_value = f(&best_point, evaluation_data.clone());
         let mut best_value = current_value;
 
         // Gets ranges in f64
-        // Since `Range` doesn't implement copy and array initialization will not clone, 
+        // Since `Range` doesn't implement copy and array initialization will not clone,
         //  this bypasses it.
-        let mut float_ranges: [Range<f64>;N] = vec![Default::default();N].try_into().unwrap();
+        let mut float_ranges: [Range<f64>; N] = vec![Default::default(); N].try_into().unwrap();
         for (float_range, range) in float_ranges.iter_mut().zip(ranges.iter()) {
             *float_range = range.start.to_f64().unwrap()..range.end.to_f64().unwrap();
         }
         // Variances scaled to the different ranges.
-        let mut scaled_variances: [f64; N] = [Default::default();N];
-        for (scaled_variance,range) in scaled_variances.iter_mut().zip(float_ranges.iter()) {
+        let mut scaled_variances: [f64; N] = [Default::default(); N];
+        for (scaled_variance, range) in scaled_variances.iter_mut().zip(float_ranges.iter()) {
             *scaled_variance = (range.end - range.start) * variance
         }
 
@@ -233,24 +234,29 @@ pub fn simulated_annealing<
         while temperature >= minimum_temperature {
             // Distributions to sample from at this temperature.
             // `Normal::new(1.,1.).unwrap()` just replacement for `default()` since it doesn't implement trait.
-            let mut distributions: [Normal<f64>;N] = [Normal::new(1.,1.).unwrap();N];
-            for (distribution,variance,point) in izip!(distributions.iter_mut(),scaled_variances.iter(),current_point.iter()) {
+            let mut distributions: [Normal<f64>; N] = [Normal::new(1., 1.).unwrap(); N];
+            for (distribution, variance, point) in izip!(
+                distributions.iter_mut(),
+                scaled_variances.iter(),
+                current_point.iter()
+            ) {
                 *distribution = Normal::new(point.to_f64().unwrap(), *variance).unwrap()
             }
 
             for _ in 0..samples_per_temperature {
                 // Samples new point
                 let mut point = [Default::default(); N];
-                for (p, r, d) in izip!(point.iter_mut(), float_ranges.iter(), distributions.iter()) {
+                for (p, r, d) in izip!(point.iter_mut(), float_ranges.iter(), distributions.iter())
+                {
                     *p = sample_normal(r, d, &mut rng);
                 }
                 let value = f(&point, evaluation_data.clone());
                 counter.fetch_add(1, Ordering::SeqCst);
-    
+
                 let difference = value - current_value;
-    
+
                 let allow_change = (difference / temperature).exp();
-    
+
                 // Update:
                 // - if there is any progression
                 // - the regression `allow_change` is within a limit `rng.gen_range(0f64..1f64)`
@@ -265,13 +271,13 @@ pub fn simulated_annealing<
                     }
                 }
                 if thread_exit.load(Ordering::SeqCst) {
-                    return (best_value,best_point);
+                    return (best_value, best_point);
                 }
             }
             step += 1;
             temperature = cooling_schedule.decay(starting_temperature, temperature, step);
         }
-        return (best_value,best_point);
+        return (best_value, best_point);
     }
 
     // Samples until value in range

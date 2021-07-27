@@ -125,7 +125,6 @@ fn boundary_function(list: &[u8; 1], images: Option<Arc<Vec<ImagePair>>>) -> f64
 // ---------------------------------------
 fn random_search_simple_function() {
     let _best = simple_optimization::random_search(
-
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
@@ -176,7 +175,6 @@ fn random_search_big() {
 // ---------------------------------------
 fn grid_search_simple_function() {
     let _best = simple_optimization::grid_search(
-
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
@@ -187,7 +185,6 @@ fn grid_search_simple_function() {
 }
 fn grid_search_complex_function() {
     let _best = simple_optimization::grid_search(
-
         [
             0f64..10f64,
             5f64..15f64,
@@ -211,7 +208,6 @@ fn grid_search_complex_function() {
 fn grid_search_boundary() {
     let images: Option<Arc<Vec<ImagePair>>> = Some(Arc::new(ImagePair::new_set()));
     let _best = simple_optimization::grid_search(
-
         [0..255],
         boundary_function,
         images.clone(),
@@ -222,7 +218,6 @@ fn grid_search_boundary() {
 }
 fn grid_search_big() {
     let _best = simple_optimization::grid_search(
-
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
         None,

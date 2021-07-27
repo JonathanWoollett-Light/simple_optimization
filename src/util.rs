@@ -30,7 +30,7 @@ pub fn poll(
 
     let mut poll_time = Instant::now();
     while count < iterations {
-    // loop {
+        // loop {
         let percent = count as f32 / iterations as f32;
 
         // If count == 0, give 00... for remaining time as placeholder
@@ -61,7 +61,10 @@ pub fn poll(
                 }
             }
         } else {
-            thread::sleep(saturating_sub(Duration::from_millis(poll_rate),poll_time.elapsed()));
+            thread::sleep(saturating_sub(
+                Duration::from_millis(poll_rate),
+                poll_time.elapsed(),
+            ));
             poll_time = Instant::now();
         }
 
@@ -84,8 +87,7 @@ pub fn poll(
 fn saturating_sub(a: Duration, b: Duration) -> Duration {
     if let Some(dur) = a.checked_sub(b) {
         dur
-    }
-    else {
-        Duration::new(0,0)
+    } else {
+        Duration::new(0, 0)
     }
 }
