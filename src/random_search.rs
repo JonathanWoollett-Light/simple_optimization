@@ -16,16 +16,15 @@ use crate::util::poll;
 ///
 /// Randomly pick parameters for `simple_function` in the ranges `0..5`, `5..15`, and `10..20` and return the parameters which produce the minimum result from `simple_function` out of `10,000` samples, printing progress every `10ms`, and exiting early if a value is found which is less than or equal to `19.`.
 /// ```
-/// use simple_optimization::random_search;
 /// use std::sync::Arc;
 /// fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
 /// let best = simple_optimization::random_search(
-///     1000,
-///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
-///     simple_function,
-///     None,
-///     Some(10),
-///     Some(19.)
+///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
+///     simple_function, // Evaluation function.
+///     None, // No additional evaluation data.
+///     Some(10), // Print progress every `10ms`.
+///     Some(19.), // Exit early if `19..` or less is reached.
+///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
 /// ```
@@ -34,17 +33,21 @@ pub fn random_search<
     T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
     const N: usize,
 >(
-    iterations: u32,
+    // Generics
     ranges: [Range<T>; N],
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
     polling: Option<u64>,
     early_exit_minimum: Option<f64>,
+    // Specifics
+    iterations: u32,
 ) -> [T; N] {
     // Gets cpu data
     let cpus = num_cpus::get() as u32;
-    let remainder = iterations % cpus;
-    let per = iterations / cpus;
+    let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
+
+    let remainder = iterations % search_cpus;
+    let per = iterations / search_cpus;
 
     let ranges_arc = Arc::new(ranges);
 
@@ -61,7 +64,7 @@ pub fn random_search<
 
     let thread_exit = Arc::new(AtomicBool::new(false));
     // (handles,(counters,thread_bests))
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..cpus)
+    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
             let counter = Arc::new(AtomicU32::new(0));

@@ -9,12 +9,6 @@ fn complex_function(list: &[f64; 5], _: Option<Arc<()>>) -> f64 {
     // thread::sleep(Duration::from_millis(25));
     (((list[0]).powf(list[1])).sin() * list[2]) + list[3] / list[4]
 }
-// `thread::sleep` except it keeps thread busy
-//  (`thread::sleep` break criterion for some reason)
-// fn thread_wait(duration: std::time::Duration) {
-//     let start = std::time::Instant::now();
-//     while start.elapsed() < duration {}
-// }
 
 // Timeout iterations
 const LIMIT: u32 = 1000000; // 1 million
@@ -27,6 +21,7 @@ const COMPLEX_EXIT: f64 = -17.;
 
 const BIG_LIMIT: u32 = 10000000; // 10 million
 const GRID_BIG_LIMIT: u32 = 215; // BIG_LIMIT.powf(1. / 3.);
+const SIMULATED_ANNEALING_BIG_LIMIT: u32 = BIG_LIMIT / 100; // BIG_LIMIT / 100;
 
 struct ImagePair {
     original_image: Vec<Vec<u8>>,
@@ -130,17 +125,17 @@ fn boundary_function(list: &[u8; 1], images: Option<Arc<Vec<ImagePair>>>) -> f64
 // ---------------------------------------
 fn random_search_simple_function() {
     let _best = simple_optimization::random_search(
-        LIMIT,
+
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
         None,
         Some(SIMPLE_EXIT),
+        LIMIT,
     );
 }
 fn random_search_complex_function() {
     let _best = simple_optimization::random_search(
-        LIMIT,
         [
             0f64..10f64,
             5f64..15f64,
@@ -152,27 +147,28 @@ fn random_search_complex_function() {
         None,
         None,
         Some(COMPLEX_EXIT),
+        LIMIT,
     );
 }
 fn random_search_boundary() {
     let images: Option<Arc<Vec<ImagePair>>> = Some(Arc::new(ImagePair::new_set()));
     let _best = simple_optimization::random_search(
-        1000,
         [0..255],
         boundary_function,
         images.clone(),
         None,
         Some(0.),
+        1000,
     );
 }
 fn random_search_big() {
     let _best = simple_optimization::random_search(
-        BIG_LIMIT, // billion
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
         None,
         None,
         None,
+        BIG_LIMIT, // billion
     );
 }
 
@@ -180,23 +176,18 @@ fn random_search_big() {
 // ---------------------------------------
 fn grid_search_simple_function() {
     let _best = simple_optimization::grid_search(
-        [GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT],
+
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
         None,
         Some(SIMPLE_EXIT),
+        [GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT],
     );
 }
 fn grid_search_complex_function() {
     let _best = simple_optimization::grid_search(
-        [
-            GRID_COMPLEX_LIMIT,
-            GRID_COMPLEX_LIMIT,
-            GRID_COMPLEX_LIMIT,
-            GRID_COMPLEX_LIMIT,
-            GRID_COMPLEX_LIMIT,
-        ],
+
         [
             0f64..10f64,
             5f64..15f64,
@@ -208,27 +199,36 @@ fn grid_search_complex_function() {
         None,
         None,
         Some(COMPLEX_EXIT),
+        [
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+            GRID_COMPLEX_LIMIT,
+        ],
     );
 }
 fn grid_search_boundary() {
     let images: Option<Arc<Vec<ImagePair>>> = Some(Arc::new(ImagePair::new_set()));
     let _best = simple_optimization::grid_search(
-        [255],
+
         [0..255],
         boundary_function,
         images.clone(),
         None,
         Some(0.),
+        [255],
     );
 }
 fn grid_search_big() {
     let _best = simple_optimization::grid_search(
-        [GRID_BIG_LIMIT, GRID_BIG_LIMIT, GRID_BIG_LIMIT],
+
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
         None,
         None,
         None,
+        [GRID_BIG_LIMIT, GRID_BIG_LIMIT, GRID_BIG_LIMIT],
     );
 }
 
@@ -239,13 +239,13 @@ fn simulated_annealing_simple_function() {
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
+        None,
+        Some(SIMPLE_EXIT),
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
-        1.,
         SIMULATED_ANNEALING_LIMIT.2,
-        None,
-        Some(SIMPLE_EXIT),
+        1.,
     );
 }
 fn simulated_annealing_complex_function() {
@@ -259,13 +259,13 @@ fn simulated_annealing_complex_function() {
         ],
         complex_function,
         None,
+        None,
+        Some(COMPLEX_EXIT),
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
-        1.,
         SIMULATED_ANNEALING_LIMIT.2,
-        None,
-        Some(COMPLEX_EXIT),
+        1.,
     );
 }
 fn simulated_annealing_boundary() {
@@ -274,13 +274,13 @@ fn simulated_annealing_boundary() {
         [0..255],
         boundary_function,
         images.clone(),
+        None,
+        Some(0.),
         100.,
         1.,
         simple_optimization::CoolingSchedule::Fast,
-        1.,
         10,
-        None,
-        Some(0.),
+        1.,
     );
 }
 fn simulated_annealing_big() {
@@ -288,17 +288,19 @@ fn simulated_annealing_big() {
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
         None,
+        None,
+        None,
         100.,
         1.,
         simple_optimization::CoolingSchedule::Fast,
+        SIMULATED_ANNEALING_BIG_LIMIT,
         1.,
-        100000,
-        None,
-        None,
     );
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    // Random search
+    // -----------------------------------
     c.bench_function("random_search_simple_function", |b| {
         b.iter(|| random_search_simple_function())
     });
@@ -309,6 +311,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| random_search_boundary())
     });
     c.bench_function("random_search_big", |b| b.iter(|| random_search_big()));
+
+    // Grid search
+    // -----------------------------------
     c.bench_function("grid_search_simple_function", |b| {
         b.iter(|| grid_search_simple_function())
     });
@@ -319,6 +324,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| grid_search_boundary())
     });
     c.bench_function("grid_search_big", |b| b.iter(|| grid_search_big()));
+
+    // Simulated annealing
+    // -----------------------------------
     c.bench_function("simulated_annealing_simple_function", |b| {
         b.iter(|| simulated_annealing_simple_function())
     });

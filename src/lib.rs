@@ -8,8 +8,9 @@
 //!
 //! ## Basic guide
 //!
-//! All the functions have these parameters:
-//! ```
+//! All the functions have the approximate form:
+//! ```ignore
+//! # use std::sync::Arc;
 //! fn function<A,T,const N: usize>(
 //!     // The values you want to optimise and there respective ranges.
 //!     // E.g. Optimizing 2 `f32`s between 0..1 and 2..3 `[0f32..1f32, 2f32..3f32]`).
@@ -28,7 +29,8 @@
 //!     //  it would still continue to guess many more times (however many you set) 
 //!     //  before returning.
 //!     early_exit_minimum: Option<f64>,
-//! )
+//!     // ...
+//! ) -> [T;N] { /* ... */}
 //! ```
 mod random_search;
 mod grid_search;

@@ -118,12 +118,12 @@ mod tests {
     fn random_search_simple() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                1000,
                 [0f64..10f64, 5f64..15f64, 10f64..20f64],
                 simple_function,
                 None,
                 None,
                 Some(19.),
+                1000,
             );
             assert!(simple_function(&best, None) < 19.);
         }
@@ -132,12 +132,12 @@ mod tests {
     fn random_search_simple_u8() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                1000,
                 [0..10, 5..15, 10..20],
                 simple_function_u8,
                 None,
                 None,
                 Some(15.),
+                1000,
             );
             assert!(simple_function_u8(&best, None) < 18.);
         }
@@ -146,7 +146,6 @@ mod tests {
     fn random_search_complex() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                1000,
                 [
                     0f64..10f64,
                     5f64..15f64,
@@ -158,6 +157,7 @@ mod tests {
                 None,
                 None,
                 Some(-18.),
+                1000,
             );
             assert!(complex_function(&best, None) < -17.);
         }
@@ -166,12 +166,12 @@ mod tests {
     fn random_search_complex_u8() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                1000,
                 [0..10, 5..15, 10..20, 15..25, 20..30],
                 complex_function_u8,
                 None,
                 None,
                 Some(-17.),
+                1000
             );
             // -17.001623699962504
             assert!(complex_function_u8(&best, None) < -17.);
@@ -183,12 +183,12 @@ mod tests {
 
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
-                1000,
                 [0..255],
                 boundary_function,
                 images.clone(),
                 None,
                 Some(0.),
+                1000,
             );
             // Since we have 15 lines of 5 the error values are: 0*15, 1*15, 2*15, 3*15, 4*15, 5*15
             assert!(boundary_function(&best, images.clone()) < 1. * 15.);
@@ -200,31 +200,32 @@ mod tests {
     #[test]
     fn grid_search_simple() {
         let best = simple_optimization::grid_search(
-            [10, 10, 10],
+
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             simple_function,
             None,
             None,
             Some(18.),
+            [10, 10, 10],
         );
         assert_eq!(simple_function(&best, None), 15.);
     }
     #[test]
     fn grid_search_simple_u8() {
         let best = simple_optimization::grid_search(
-            [10, 10, 10],
             [0..10, 5..15, 10..20],
             simple_function_u8,
             None,
             None,
             Some(18.),
+            [10, 10, 10],
         );
         assert_eq!(simple_function_u8(&best, None), 15.);
     }
     #[test]
     fn grid_search_complex() {
         let best = simple_optimization::grid_search(
-            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
+
             [
                 0f64..10f64,
                 5f64..15f64,
@@ -236,18 +237,20 @@ mod tests {
             None,
             None,
             Some(-19.),
+            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
         );
         assert!(complex_function(&best, None) < -14.);
     }
     #[test]
     fn grid_search_complex_u8() {
         let best = simple_optimization::grid_search(
-            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
+
             [0..10, 5..15, 10..20, 15..25, 20..30],
             complex_function_u8,
             None,
             None,
             Some(-14.589918826094747),
+            [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
         );
         assert_eq!(complex_function_u8(&best, None), -14.589918826094747);
     }
@@ -257,12 +260,13 @@ mod tests {
 
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::grid_search(
-                [255],
+
                 [0..255],
                 boundary_function,
                 images.clone(),
                 None,
                 Some(0.),
+                [255],
             );
             assert_eq!(boundary_function(&best, images.clone()), 0.);
         }
@@ -277,13 +281,14 @@ mod tests {
                 [0f64..10f64, 5f64..15f64, 10f64..20f64],
                 simple_function,
                 None,
+                None,
+                Some(17.),
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
+                100,
                 1.,
-                10,
-                None,
-                Some(17.),
+                
             );
             assert!(simple_function(&best, None) < 19.);
         }
@@ -295,13 +300,14 @@ mod tests {
                 [0..10, 5..15, 10..20],
                 simple_function_u8,
                 None,
+                None,
+                Some(16.),
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
+                100,
                 1.,
-                10,
-                None,
-                Some(16.),
+
             );
             assert!(simple_function_u8(&best, None) < 18.);
         }
@@ -319,13 +325,14 @@ mod tests {
                 ],
                 complex_function,
                 None,
+                None,
+                Some(-20.),
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
+                100,
                 1.,
-                10,
-                None,
-                Some(-20.),
+
             );
             assert!(complex_function(&best, None) < -17.);
         }
@@ -337,13 +344,15 @@ mod tests {
                 [0..10, 5..15, 10..20, 15..25, 20..30],
                 complex_function_u8,
                 None,
+                None,
+                Some(-19.),
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
+                100,
                 1.,
-                10,
-                None,
-                Some(-19.),
+
+
             );
             assert!(complex_function_u8(&best, None) < -17.);
         }
@@ -357,13 +366,13 @@ mod tests {
                 [0..255],
                 boundary_function,
                 images.clone(),
+                None,
+                Some(0.),
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
+                100,
                 1.,
-                10,
-                None,
-                Some(0.),
             );
             assert_eq!(boundary_function(&best, images.clone()), 0.);
         }

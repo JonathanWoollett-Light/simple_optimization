@@ -16,21 +16,23 @@ use crate::util::poll;
 ///
 /// Evaluate all combinations of values from the 3 values where:
 /// - Value 1 covers `10` values at equal intervals from `0..10` (`0,1,2,3,4,5,6,7,8,9`).
-/// - Value 2 covers `10` values at equal intervals from `5..15`.
-/// - Value 3 covers `10` values at equal intervals from `10..20`.
+/// - Value 2 covers `11` values at equal intervals from `5..15`.
+/// - Value 3 covers `12` values at equal intervals from `10..20`.
 /// 
 /// Printing progress every `10ms` and exiting early if a value is found which is less than or equal to `15.`.
 /// ```
-/// use simple_optimization::grid_search;
 /// use std::sync::Arc;
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
-/// let best = grid_search(
-///     [10,10,10],
-///     [0f64..10f64, 5f64..15f64, 10f64..20f64],
-///     simple_function,
-///     None,
-///     Some(10),
-///     Some(15.)
+/// let best = simple_optimization::grid_search(
+///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
+///     simple_function, // Evaluation function.
+///     None, //  No additional evaluation data.
+///     Some(10), // Print progress every `10ms`.
+///     Some(15.), // Exit early if `15.` or less is reached.
+///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`) 
+///     //  and `12` along range `2` (`10..20`).
+///     // In total taking `10*11*12=1320` samples.
+///     [10,11,12], 
 /// );
 /// assert_eq!(simple_function(&best, None), 15.);
 /// ```
@@ -49,12 +51,14 @@ pub fn grid_search<
         + num::FromPrimitive,
     const N: usize,
 >(
-    points: [u32; N],
+    // Generics
     ranges: [Range<T>; N],
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
     polling: Option<u64>,
     early_exit_minimum: Option<f64>,
+    // Specifics
+    points: [u32; N],
 ) -> [T; N] {
     // Compute step sizes
     let mut steps = [Default::default(); N];

@@ -30,6 +30,7 @@ pub fn poll(
 
     // let mut i = 0;
     while count < iterations {
+    // loop {
         let percent = count as f32 / iterations as f32;
 
         // If count == 0, give 00... for remaining time as placeholder
