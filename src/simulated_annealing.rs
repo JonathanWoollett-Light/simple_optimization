@@ -114,7 +114,7 @@ pub fn simulated_annealing<
         starting_temperature,
         minimum_temperature,
         cooling_schedule,
-        remainder / search_cpus,
+        remainder,
         variance,
     );
 
