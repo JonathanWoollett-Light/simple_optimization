@@ -3,7 +3,7 @@ use print_duration::print_duration;
 use std::{
     io::{stdout, Write},
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -28,9 +28,9 @@ impl Polling {
 
 pub fn poll(
     data: Polling,
-    counters: Vec<Arc<AtomicU32>>,
-    offset: u32,
-    iterations: u32,
+    counters: Vec<Arc<AtomicU64>>,
+    offset: u64,
+    iterations: u64,
     thread_bests: Vec<Arc<Mutex<f64>>>,
     thread_exit: Arc<AtomicBool>,
 ) {
@@ -40,8 +40,8 @@ pub fn poll(
         + counters
             .iter()
             .map(|c| c.load(Ordering::SeqCst))
-            .sum::<u32>();
-            
+            .sum::<u64>();
+
     if data.printing {
         println!("{:20}", iterations);
     }
@@ -118,7 +118,7 @@ pub fn poll(
             + counters
                 .iter()
                 .map(|c| c.load(Ordering::SeqCst))
-                .sum::<u32>();
+                .sum::<u64>();
     }
 
     if data.printing {

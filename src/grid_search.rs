@@ -4,7 +4,7 @@ use std::{
     f64,
     ops::{AddAssign, Div, Range, Sub},
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -58,12 +58,12 @@ pub fn grid_search<
     evaluation_data: Option<Arc<A>>,
     polling: Option<Polling>,
     // Specifics
-    points: [u32; N],
+    points: [u64; N],
 ) -> [T; N] {
     // Compute step sizes
     let mut steps = [Default::default(); N];
     for (r, k, s) in izip!(ranges.iter(), points.iter(), steps.iter_mut()) {
-        *s = (r.end - r.start) / T::from_u32(*k).unwrap();
+        *s = (r.end - r.start) / T::from_u64(*k).unwrap();
     }
 
     // Compute point values
@@ -122,12 +122,12 @@ pub fn grid_search<
 
         let thread_exit = Arc::new(AtomicBool::new(false));
         // (handles,counters)
-        let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = point_values[0]
+        let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = point_values[0]
             .iter()
             .map(|p_value| {
                 point[0] = *p_value;
                 let point_values_clone = point_values.clone();
-                let counter = Arc::new(AtomicU32::new(0));
+                let counter = Arc::new(AtomicU64::new(0));
                 let thread_best = Arc::new(Mutex::new(f64::MAX));
 
                 let counter_clone = counter.clone();
@@ -151,11 +151,11 @@ pub fn grid_search<
                 )
             })
             .unzip();
-        let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
+        let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
             links.into_iter().unzip();
 
         if let Some(poll_data) = polling {
-            let iterations = point_values.iter().map(|pvs| pvs.len() as u32).product();
+            let iterations = point_values.iter().map(|pvs| pvs.len() as u64).product();
             poll(
                 poll_data,
                 counters,
@@ -199,7 +199,7 @@ pub fn grid_search<
         evaluation_data: Option<Arc<A>>,
         mut point: [T; N],
         index: usize,
-        counter: Arc<AtomicU32>,
+        counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
     ) -> (f64, [T; N]) {

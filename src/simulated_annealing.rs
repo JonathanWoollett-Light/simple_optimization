@@ -7,7 +7,7 @@ use std::{
     f64,
     ops::{Range, Sub},
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -23,7 +23,7 @@ pub enum CoolingSchedule {
     Fast,
 }
 impl CoolingSchedule {
-    fn decay(&self, t_start: f64, t_current: f64, step: u32) -> f64 {
+    fn decay(&self, t_start: f64, t_current: f64, step: u64) -> f64 {
         match self {
             Self::Logarithmic => t_current * (2f64).ln() / ((step + 1) as f64).ln(),
             Self::Exponential(x) => x * t_current,
@@ -32,11 +32,11 @@ impl CoolingSchedule {
     }
     // Given temperature start and temperature min, gives number of steps of decay which will occur
     //  before temperature start decays to be less than temperature min, then causing program to exit.
-    fn steps(&self, t_start: f64, t_min: f64) -> u32 {
+    fn steps(&self, t_start: f64, t_min: f64) -> u64 {
         match self {
-            Self::Logarithmic => (((2f64).ln() * t_start / t_min).exp() - 1f64).ceil() as u32,
-            Self::Exponential(x) => ((t_min / t_start).log(*x)).ceil() as u32,
-            Self::Fast => (t_start / t_min).ceil() as u32,
+            Self::Logarithmic => (((2f64).ln() * t_start / t_min).exp() - 1f64).ceil() as u64,
+            Self::Exponential(x) => ((t_min / t_start).log(*x)).ceil() as u64,
+            Self::Fast => (t_start / t_min).ceil() as u64,
         }
     }
 }
@@ -91,10 +91,10 @@ pub fn simulated_annealing<
     starting_temperature: f64,
     minimum_temperature: f64,
     cooling_schedule: CoolingSchedule,
-    samples_per_temperature: u32,
+    samples_per_temperature: u64,
     variance: f64,
 ) -> [T; N] {
-    let cpus = num_cpus::get() as u32;
+    let cpus = num_cpus::get() as u64;
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);
@@ -108,7 +108,7 @@ pub fn simulated_annealing<
         ranges_arc.clone(),
         f,
         evaluation_data.clone(),
-        Arc::new(AtomicU32::new(Default::default())),
+        Arc::new(AtomicU64::new(Default::default())),
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
         starting_temperature,
@@ -118,10 +118,10 @@ pub fn simulated_annealing<
         variance,
     );
 
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus)
+    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
-            let counter = Arc::new(AtomicU32::new(0));
+            let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
 
             let counter_clone = counter.clone();
@@ -148,7 +148,7 @@ pub fn simulated_annealing<
             )
         })
         .unzip();
-    let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
+    let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
         links.into_iter().unzip();
 
     if let Some(poll_data) = polling {
@@ -194,14 +194,14 @@ pub fn simulated_annealing<
         ranges: Arc<[Range<T>; N]>,
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
-        counter: Arc<AtomicU32>,
+        counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
         // Specific
         starting_temperature: f64,
         minimum_temperature: f64,
         cooling_schedule: CoolingSchedule,
-        samples_per_temperature: u32,
+        samples_per_temperature: u64,
         variance: f64,
     ) -> (f64, [T; N]) {
         let mut rng = thread_rng();

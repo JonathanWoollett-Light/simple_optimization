@@ -4,7 +4,7 @@ use std::{
     f64,
     ops::Range,
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -40,10 +40,10 @@ pub fn random_search<
     evaluation_data: Option<Arc<A>>,
     polling: Option<Polling>,
     // Specifics
-    iterations: u32,
+    iterations: u64,
 ) -> [T; N] {
     // Gets cpu data
-    let cpus = num_cpus::get() as u32;
+    let cpus = num_cpus::get() as u64;
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let remainder = iterations % search_cpus;
@@ -57,17 +57,17 @@ pub fn random_search<
         f,
         evaluation_data.clone(),
         // Since we are doing this on the same thread, we don't need to use these
-        Arc::new(AtomicU32::new(Default::default())),
+        Arc::new(AtomicU64::new(Default::default())),
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
     );
 
     let thread_exit = Arc::new(AtomicBool::new(false));
     // (handles,(counters,thread_bests))
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus)
+    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
-            let counter = Arc::new(AtomicU32::new(0));
+            let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
 
             let counter_clone = counter.clone();
@@ -90,7 +90,7 @@ pub fn random_search<
             )
         })
         .unzip();
-    let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
+    let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
         links.into_iter().unzip();
 
     if let Some(poll_data) = polling {
@@ -123,11 +123,11 @@ pub fn random_search<
         T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
         const N: usize,
     >(
-        iterations: u32,
+        iterations: u64,
         ranges: Arc<[Range<T>; N]>,
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
-        counter: Arc<AtomicU32>,
+        counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
     ) -> (f64, [T; N]) {
