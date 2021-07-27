@@ -40,3 +40,4 @@ mod util;
 pub use grid_search::*;
 pub use random_search::*;
 pub use simulated_annealing::*;
+pub use util::Polling;

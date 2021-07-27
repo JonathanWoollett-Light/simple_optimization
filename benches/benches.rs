@@ -23,6 +23,8 @@ const BIG_LIMIT: u32 = 10000000; // 10 million
 const GRID_BIG_LIMIT: u32 = 215; // BIG_LIMIT.powf(1. / 3.);
 const SIMULATED_ANNEALING_BIG_LIMIT: u32 = BIG_LIMIT / 100; // BIG_LIMIT / 100;
 
+use simple_optimization::Polling;
+
 struct ImagePair {
     original_image: Vec<Vec<u8>>,
     binary_target: Vec<Vec<u8>>,
@@ -128,8 +130,7 @@ fn random_search_simple_function() {
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
-        None,
-        Some(SIMPLE_EXIT),
+        Some(Polling::new(false, Some(SIMPLE_EXIT))),
         LIMIT,
     );
 }
@@ -144,8 +145,7 @@ fn random_search_complex_function() {
         ],
         complex_function,
         None,
-        None,
-        Some(COMPLEX_EXIT),
+        Some(Polling::new(false, Some(COMPLEX_EXIT))),
         LIMIT,
     );
 }
@@ -155,8 +155,7 @@ fn random_search_boundary() {
         [0..255],
         boundary_function,
         images.clone(),
-        None,
-        Some(0.),
+        Some(Polling::new(false, Some(0.))),
         1000,
     );
 }
@@ -164,7 +163,6 @@ fn random_search_big() {
     let _best = simple_optimization::random_search(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
-        None,
         None,
         None,
         BIG_LIMIT, // billion
@@ -178,8 +176,7 @@ fn grid_search_simple_function() {
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
-        None,
-        Some(SIMPLE_EXIT),
+        Some(Polling::new(false, Some(SIMPLE_EXIT))),
         [GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT],
     );
 }
@@ -194,8 +191,7 @@ fn grid_search_complex_function() {
         ],
         complex_function,
         None,
-        None,
-        Some(COMPLEX_EXIT),
+        Some(Polling::new(false, Some(COMPLEX_EXIT))),
         [
             GRID_COMPLEX_LIMIT,
             GRID_COMPLEX_LIMIT,
@@ -211,8 +207,7 @@ fn grid_search_boundary() {
         [0..255],
         boundary_function,
         images.clone(),
-        None,
-        Some(0.),
+        Some(Polling::new(false, Some(0.))),
         [255],
     );
 }
@@ -220,7 +215,6 @@ fn grid_search_big() {
     let _best = simple_optimization::grid_search(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
-        None,
         None,
         None,
         [GRID_BIG_LIMIT, GRID_BIG_LIMIT, GRID_BIG_LIMIT],
@@ -234,8 +228,7 @@ fn simulated_annealing_simple_function() {
         [0f64..10f64, 5f64..15f64, 10f64..20f64],
         simple_function,
         None,
-        None,
-        Some(SIMPLE_EXIT),
+        Some(Polling::new(false, Some(SIMPLE_EXIT))),
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
@@ -254,8 +247,7 @@ fn simulated_annealing_complex_function() {
         ],
         complex_function,
         None,
-        None,
-        Some(COMPLEX_EXIT),
+        Some(Polling::new(false, Some(COMPLEX_EXIT))),
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
@@ -269,8 +261,7 @@ fn simulated_annealing_boundary() {
         [0..255],
         boundary_function,
         images.clone(),
-        None,
-        Some(0.),
+        Some(Polling::new(false, Some(0.))),
         100.,
         1.,
         simple_optimization::CoolingSchedule::Fast,
@@ -282,7 +273,6 @@ fn simulated_annealing_big() {
     let _best = simple_optimization::simulated_annealing(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
-        None,
         None,
         None,
         100.,

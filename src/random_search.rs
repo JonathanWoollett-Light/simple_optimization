@@ -10,20 +10,21 @@ use std::{
     thread,
 };
 
-use crate::util::poll;
+use crate::util::{poll,Polling};
 
 /// [Random search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Random_search)
 ///
 /// Randomly pick parameters for `simple_function` in the ranges `0..5`, `5..15`, and `10..20` and return the parameters which produce the minimum result from `simple_function` out of `10,000` samples, printing progress every `10ms`, and exiting early if a value is found which is less than or equal to `19.`.
 /// ```
 /// use std::sync::Arc;
+/// use simple_optimization::{random_search, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
-/// let best = simple_optimization::random_search(
+/// let best = random_search(
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, // No additional evaluation data.
-///     Some(10), // Print progress every `10ms`.
-///     Some(19.), // Exit early if `19..` or less is reached.
+///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
+///     Some(Polling::new(true,Some(19.))),
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
@@ -37,8 +38,7 @@ pub fn random_search<
     ranges: [Range<T>; N],
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
-    polling: Option<u64>,
-    early_exit_minimum: Option<f64>,
+    polling: Option<Polling>,
     // Specifics
     iterations: u32,
 ) -> [T; N] {
@@ -93,13 +93,12 @@ pub fn random_search<
     let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
         links.into_iter().unzip();
 
-    if let Some(poll_rate) = polling {
+    if let Some(poll_data) = polling {
         poll(
-            poll_rate,
+            poll_data,
             counters,
             remainder,
             iterations,
-            early_exit_minimum,
             thread_bests,
             thread_exit,
         );

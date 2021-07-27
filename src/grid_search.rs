@@ -10,7 +10,7 @@ use std::{
     thread,
 };
 
-use crate::util::poll;
+use crate::util::{poll,Polling};
 
 /// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
@@ -22,13 +22,14 @@ use crate::util::poll;
 /// Printing progress every `10ms` and exiting early if a value is found which is less than or equal to `15.`.
 /// ```
 /// use std::sync::Arc;
+/// use simple_optimization::{grid_search, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
-/// let best = simple_optimization::grid_search(
+/// let best = grid_search(
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, //  No additional evaluation data.
-///     Some(10), // Print progress every `10ms`.
-///     Some(15.), // Exit early if `15.` or less is reached.
+///     // Polling every `10ms`, print progress (`true`) and exit early if `15.` or less is reached.
+///     Some(Polling { poll_rate: 5, printing: true, early_exit_minimum: Some(15.) }),
 ///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.
@@ -55,8 +56,7 @@ pub fn grid_search<
     ranges: [Range<T>; N],
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
-    polling: Option<u64>,
-    early_exit_minimum: Option<f64>,
+    polling: Option<Polling>,
     // Specifics
     points: [u32; N],
 ) -> [T; N] {
@@ -91,7 +91,6 @@ pub fn grid_search<
         evaluation_data,
         start,
         polling,
-        early_exit_minimum,
     );
     return params;
 
@@ -114,8 +113,7 @@ pub fn grid_search<
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
         mut point: [T; N],
-        polling: Option<u64>,
-        early_exit_minimum: Option<f64>,
+        polling: Option<Polling>,
     ) -> (f64, [T; N]) {
         // Could just `assert!(N>0)` and not handle it, but this handles it fine.
         if 0 == point_values.len() {
@@ -156,14 +154,13 @@ pub fn grid_search<
         let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
             links.into_iter().unzip();
 
-        if let Some(poll_rate) = polling {
+        if let Some(poll_data) = polling {
             let iterations = point_values.iter().map(|pvs| pvs.len() as u32).product();
             poll(
-                poll_rate,
+                poll_data,
                 counters,
                 0,
                 iterations,
-                early_exit_minimum,
                 thread_bests,
                 thread_exit,
             );

@@ -13,7 +13,7 @@ use std::{
     thread,
 };
 
-use crate::util::poll;
+use crate::util::{poll,Polling};
 
 /// Cooling schedule for simulated annealing.
 #[derive(Clone, Copy)]
@@ -47,15 +47,16 @@ impl CoolingSchedule {
 /// Run simulated annealing starting at temperature `100.` decaying with a fast cooling schedule (`CoolingSchedule::Fast`) until reach a minimum temperature of `1.`, taking `100` samples at each temperature, with a variance in sampling of `1.`.
 /// ```
 /// use std::sync::Arc;
+/// use simple_optimization::{simulated_annealing, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 {
 ///  list.iter().sum()
 /// }
-/// let best = simple_optimization::simulated_annealing(
+/// let best = simulated_annealing(
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, // No additional evaluation data.
-///     None, // No printing progress.
-///     Some(17.), // Exit early if `17.` or less is reached.
+///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
+///     Some(Polling::new(false,Some(17.))),
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
@@ -85,8 +86,7 @@ pub fn simulated_annealing<
     ranges: [Range<T>; N],
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
-    polling: Option<u64>,
-    early_exit_minimum: Option<f64>,
+    polling: Option<Polling>,
     // Specific
     starting_temperature: f64,
     minimum_temperature: f64,
@@ -151,13 +151,12 @@ pub fn simulated_annealing<
     let (counters, thread_bests): (Vec<Arc<AtomicU32>>, Vec<Arc<Mutex<f64>>>) =
         links.into_iter().unzip();
 
-    if let Some(poll_rate) = polling {
+    if let Some(poll_data) = polling {
         poll(
-            poll_rate,
+            poll_data,
             counters,
             steps * remainder,
             steps * samples_per_temperature,
-            early_exit_minimum,
             thread_bests,
             thread_exit,
         );
