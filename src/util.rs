@@ -28,7 +28,7 @@ pub fn poll(
             .sum::<u32>();
     println!("{:20}", iterations);
 
-    // let mut i = 0;
+    let mut poll_time = Instant::now();
     while count < iterations {
     // loop {
         let percent = count as f32 / iterations as f32;
@@ -61,7 +61,8 @@ pub fn poll(
                 }
             }
         } else {
-            thread::sleep(Duration::from_millis(poll_rate));
+            thread::sleep(saturating_sub(Duration::from_millis(poll_rate),poll_time.elapsed()));
+            poll_time = Instant::now();
         }
 
         count = offset
@@ -78,4 +79,13 @@ pub fn poll(
         print_duration(start.elapsed(), 0..3)
     );
     stdout.flush().unwrap();
+}
+// Since `Duration::saturating_sub` is unstable this is an alternative.
+fn saturating_sub(a: Duration, b: Duration) -> Duration {
+    if let Some(dur) = a.checked_sub(b) {
+        dur
+    }
+    else {
+        Duration::new(0,0)
+    }
 }
