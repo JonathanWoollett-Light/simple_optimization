@@ -98,9 +98,25 @@ pub fn simulated_annealing<
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);
-    let iterations = search_cpus * steps * samples_per_temperature;
     let thread_exit = Arc::new(AtomicBool::new(false));
     let ranges_arc =  Arc::new(ranges);
+
+    let remainder = samples_per_temperature % search_cpus;
+    let per = samples_per_temperature / search_cpus;
+
+    let (best_value, best_params) = search(
+        ranges_arc.clone(),
+        f,
+        evaluation_data.clone(),
+        Arc::new(AtomicU32::new(Default::default())),
+        Arc::new(Mutex::new(Default::default())),
+        Arc::new(AtomicBool::new(false)),
+        starting_temperature,
+        minimum_temperature,
+        cooling_schedule,
+        remainder / search_cpus,
+        variance,
+    );
 
     let (handles, links): (Vec<_>, Vec<(Arc<AtomicU32>, Arc<Mutex<f64>>)>) = (0..search_cpus).map(|_| {
         let ranges_clone = ranges_arc.clone();
@@ -111,7 +127,6 @@ pub fn simulated_annealing<
         let thread_best_clone = thread_best.clone();
         let thread_exit_clone = thread_exit.clone();
         let evaluation_data_clone = evaluation_data.clone();
-
         (
             thread::spawn(move || {
                 search(
@@ -124,7 +139,7 @@ pub fn simulated_annealing<
                     starting_temperature,
                     minimum_temperature,
                     cooling_schedule,
-                    samples_per_temperature / search_cpus,
+                    per,
                     variance,
                 )
             }),
@@ -138,8 +153,8 @@ pub fn simulated_annealing<
         poll(
             poll_rate,
             counters,
-            0,
-            iterations,
+            steps * remainder,
+            steps * samples_per_temperature,
             early_exit_minimum,
             thread_bests,
             thread_exit,
@@ -150,7 +165,7 @@ pub fn simulated_annealing<
 
     let (_, best_params) = joins
         .into_iter()
-        .fold((f64::MAX, [Default::default();N]), |(bv, bp), (v, p)| {
+        .fold((best_value, best_params), |(bv, bp), (v, p)| {
             if v < bv {
                 (v, p)
             } else {
