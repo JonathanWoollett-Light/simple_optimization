@@ -196,7 +196,7 @@ pub fn poll<const N: usize>(
             print_duration(start.elapsed(), 0..3),
             held_best,
             if data.thread_execution_reporting {
-                let (recent_execution_times, average_execution_times): (Vec<String>,Vec<String>) = (0..thread_execution_times[0].len()).map(|i| {
+                let (average_execution_times, recent_execution_times): (Vec<String>,Vec<String>) = (0..thread_execution_times[0].len()).map(|i| {
                     let (mut sum, mut num) = (Duration::new(0,0),0);
                     for n in 0..thread_execution_times.len() {
                         {
@@ -208,6 +208,9 @@ pub fn poll<const N: usize>(
                             *data = (Duration::new(0,0),0);
                         }
                     }
+                    if num > 0 {
+                        held_recent_execution_times[i] = sum.div_f64(num as f64);
+                    }
                     (
                         if held_average_execution_times[i].1 > 0 {
                             format!("{:.1?}",held_average_execution_times[i].0.div_f64(held_average_execution_times[i].1 as f64))
@@ -215,9 +218,8 @@ pub fn poll<const N: usize>(
                         else {
                             String::from("?")
                         },
-                        if num > 0 {
-                            held_recent_execution_times[i] = sum.div_f64(num as f64);
-                            format!("{:.1?}",held_recent_execution_times)
+                        if held_recent_execution_times[i] > Duration::new(0,0) {
+                            format!("{:.1?}",held_recent_execution_times[i])
                         }
                         else {
                             String::from("?")
