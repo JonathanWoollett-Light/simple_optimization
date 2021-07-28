@@ -4,13 +4,14 @@ use std::{
     f64,
     ops::Range,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
         Arc, Mutex,
     },
     thread,
+    time::{Duration, Instant}
 };
 
-use crate::util::{poll,Polling};
+use crate::util::{poll, Polling, update_execution_position};
 
 /// [Random search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Random_search)
 ///
@@ -52,7 +53,7 @@ pub fn random_search<
     let ranges_arc = Arc::new(ranges);
 
     let (best_value, best_params) = search(
-        remainder,
+        // Generics
         ranges_arc.clone(),
         f,
         evaluation_data.clone(),
@@ -60,38 +61,55 @@ pub fn random_search<
         Arc::new(AtomicU64::new(Default::default())),
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU8::new(0)),
+        Arc::new([Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0))]),
+        // Specifics
+        remainder,
+        
     );
 
     let thread_exit = Arc::new(AtomicBool::new(false));
     // (handles,(counters,thread_bests))
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = (0..search_cpus)
+    let (handles, links): (Vec<_>,Vec<_>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
             let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
+            let thread_execution_position = Arc::new(AtomicU8::new(0));
+            let thread_execution_time = Arc::new([
+                Mutex::new((Duration::new(0,0),0)),
+                Mutex::new((Duration::new(0,0),0))
+            ]);
 
             let counter_clone = counter.clone();
             let thread_best_clone = thread_best.clone();
             let thread_exit_clone = thread_exit.clone();
             let evaluation_data_clone = evaluation_data.clone();
+            let thread_execution_position_clone = thread_execution_position.clone();
+            let thread_execution_time_clone = thread_execution_time.clone();
             (
                 thread::spawn(move || {
                     search(
-                        per,
+                        // Generics
                         ranges_clone,
                         f,
                         evaluation_data_clone,
                         counter_clone,
                         thread_best_clone,
                         thread_exit_clone,
+                        thread_execution_position_clone,
+                        thread_execution_time_clone,
+                        // Specifics
+                        per,
                     )
                 }),
-                (counter, thread_best),
+                (counter, (thread_best,(thread_execution_position, thread_execution_time))),
             )
         })
         .unzip();
-    let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
-        links.into_iter().unzip();
+    let (counters, links): (Vec<Arc<AtomicU64>>, Vec<_>) = links.into_iter().unzip();
+    let (thread_bests, links): (Vec<Arc<Mutex<f64>>>, Vec<_>) = links.into_iter().unzip();
+    let (thread_execution_positions, thread_execution_times) = links.into_iter().unzip();
 
     if let Some(poll_data) = polling {
         poll(
@@ -101,6 +119,8 @@ pub fn random_search<
             iterations,
             thread_bests,
             thread_exit,
+            thread_execution_positions,
+            thread_execution_times
         );
     }
 
@@ -123,14 +143,19 @@ pub fn random_search<
         T: 'static + Copy + Send + Sync + Default + SampleUniform + PartialOrd,
         const N: usize,
     >(
-        iterations: u64,
+        // Generics
         ranges: Arc<[Range<T>; N]>,
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
         counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
+        thread_execution_position: Arc<AtomicU8>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>;2]>,
+        // Specifics
+        iterations: u64,
     ) -> (f64, [T; N]) {
+        let mut execution_position_timer = Instant::now();
         let mut rng = thread_rng();
         let mut params = [Default::default(); N];
 
@@ -141,8 +166,16 @@ pub fn random_search<
             for (range, param) in ranges.iter().zip(params.iter_mut()) {
                 *param = rng.gen_range(range.clone());
             }
+
+            // Update execution position
+            execution_position_timer = update_execution_position(0, execution_position_timer, &thread_execution_position, &thread_execution_times);
+
             // Run function
             let new_value = f(&params, evaluation_data.clone());
+
+            // Update execution position
+            execution_position_timer = update_execution_position(1, execution_position_timer, &thread_execution_position, &thread_execution_times);
+
             // Check best
             if new_value < best_value {
                 best_value = new_value;

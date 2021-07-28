@@ -2,18 +2,9 @@ use itertools::izip;
 use rand::{distributions::uniform::SampleUniform, thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 
-use std::{
-    convert::TryInto,
-    f64,
-    ops::{Range, Sub},
-    sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
-        Arc, Mutex,
-    },
-    thread,
-};
+use std::{convert::TryInto, f64, ops::{Range, Sub}, sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering}}, thread, time::{Duration, Instant}};
 
-use crate::util::{poll,Polling};
+use crate::util::{poll, Polling, update_execution_position};
 
 /// Cooling schedule for simulated annealing.
 #[derive(Clone, Copy)]
@@ -105,12 +96,16 @@ pub fn simulated_annealing<
     let per = samples_per_temperature / search_cpus;
 
     let (best_value, best_params) = search(
+        // Generics
         ranges_arc.clone(),
         f,
         evaluation_data.clone(),
         Arc::new(AtomicU64::new(Default::default())),
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU8::new(0)),
+        Arc::new([Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0))]),
+        // Specifics
         starting_temperature,
         minimum_temperature,
         cooling_schedule,
@@ -118,25 +113,37 @@ pub fn simulated_annealing<
         variance,
     );
 
-    let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = (0..search_cpus)
+    let (handles, links): (Vec<_>,Vec<_>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
             let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
+            let thread_execution_position = Arc::new(AtomicU8::new(0));
+            let thread_execution_time = Arc::new([
+                Mutex::new((Duration::new(0,0),0)),
+                Mutex::new((Duration::new(0,0),0)),
+                Mutex::new((Duration::new(0,0),0))
+            ]);
 
             let counter_clone = counter.clone();
             let thread_best_clone = thread_best.clone();
             let thread_exit_clone = thread_exit.clone();
             let evaluation_data_clone = evaluation_data.clone();
+            let thread_execution_position_clone = thread_execution_position.clone();
+            let thread_execution_time_clone = thread_execution_time.clone();
             (
                 thread::spawn(move || {
                     search(
+                        // Generics
                         ranges_clone,
                         f,
                         evaluation_data_clone,
                         counter_clone,
                         thread_best_clone,
                         thread_exit_clone,
+                        thread_execution_position_clone,
+                        thread_execution_time_clone,
+                        // Specifics
                         starting_temperature,
                         minimum_temperature,
                         cooling_schedule,
@@ -144,12 +151,13 @@ pub fn simulated_annealing<
                         variance,
                     )
                 }),
-                (counter, thread_best),
+                (counter, (thread_best,(thread_execution_position, thread_execution_time))),
             )
         })
         .unzip();
-    let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
-        links.into_iter().unzip();
+    let (counters, links): (Vec<Arc<AtomicU64>>, Vec<_>) = links.into_iter().unzip();
+    let (thread_bests, links): (Vec<Arc<Mutex<f64>>>, Vec<_>) = links.into_iter().unzip();
+    let (thread_execution_positions, thread_execution_times) = links.into_iter().unzip();
 
     if let Some(poll_data) = polling {
         poll(
@@ -159,6 +167,8 @@ pub fn simulated_annealing<
             steps * samples_per_temperature,
             thread_bests,
             thread_exit,
+            thread_execution_positions,
+            thread_execution_times
         );
     }
 
@@ -197,6 +207,8 @@ pub fn simulated_annealing<
         counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
+        thread_execution_position: Arc<AtomicU8>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>;3]>,
         // Specific
         starting_temperature: f64,
         minimum_temperature: f64,
@@ -204,6 +216,7 @@ pub fn simulated_annealing<
         samples_per_temperature: u64,
         variance: f64,
     ) -> (f64, [T; N]) {
+        let mut execution_position_timer = Instant::now();
         let mut rng = thread_rng();
         // Get initial point
         let mut current_point = [Default::default(); N];
@@ -230,6 +243,7 @@ pub fn simulated_annealing<
 
         let mut step = 1;
         let mut temperature = starting_temperature;
+        // Iterate while starting temperature has yet to cool to the minimum temperature.
         while temperature >= minimum_temperature {
             // Distributions to sample from at this temperature.
             // `Normal::new(1.,1.).unwrap()` just replacement for `default()` since it doesn't implement trait.
@@ -241,24 +255,35 @@ pub fn simulated_annealing<
             ) {
                 *distribution = Normal::new(point.to_f64().unwrap(), *variance).unwrap()
             }
-
+            // Iterate over samples from this temperature
             for _ in 0..samples_per_temperature {
+                // Update execution position
+                execution_position_timer = update_execution_position(0, execution_position_timer, &thread_execution_position, &thread_execution_times);
+
                 // Samples new point
                 let mut point = [Default::default(); N];
                 for (p, r, d) in izip!(point.iter_mut(), float_ranges.iter(), distributions.iter())
                 {
                     *p = sample_normal(r, d, &mut rng);
                 }
+
+                // Update execution position
+                execution_position_timer = update_execution_position(1, execution_position_timer, &thread_execution_position, &thread_execution_times);
+
+                // Evaluates new point
                 let value = f(&point, evaluation_data.clone());
+
+                // Update execution position
+                execution_position_timer = update_execution_position(2, execution_position_timer, &thread_execution_position, &thread_execution_times);
+                // Increment counter
                 counter.fetch_add(1, Ordering::SeqCst);
 
-                let difference = value - current_value;
-
-                let allow_change = (difference / temperature).exp();
 
                 // Update:
                 // - if there is any progression
                 // - the regression `allow_change` is within a limit `rng.gen_range(0f64..1f64)`
+                let difference = value - current_value;
+                let allow_change = (difference / temperature).exp();
                 if difference < 0. || allow_change < rng.gen_range(0f64..1f64) {
                     current_point = point;
                     current_value = value;

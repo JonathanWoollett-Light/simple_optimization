@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
     use simple_optimization::Polling;
+    use std::sync::Arc;
     // For random element we want to reruns tests a few times.
     const CHECK_ITERATIONS: usize = 100;
 

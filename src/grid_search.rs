@@ -4,13 +4,14 @@ use std::{
     f64,
     ops::{AddAssign, Div, Range, Sub},
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
         Arc, Mutex,
     },
     thread,
+    time::Duration
 };
 
-use crate::util::{poll,Polling};
+use crate::util::{poll, Polling, update_execution_position};
 
 /// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
@@ -85,13 +86,7 @@ pub fn grid_search<
     for (s, p) in start.iter_mut().zip(point_values.iter()) {
         *s = p[0];
     }
-    let (_, params) = thread_search(
-        &point_values,
-        f,
-        evaluation_data,
-        start,
-        polling,
-    );
+    let (_, params) = thread_search(f, evaluation_data, polling, &point_values,start);
     return params;
 
     fn thread_search<
@@ -109,11 +104,13 @@ pub fn grid_search<
             + num::FromPrimitive,
         const N: usize,
     >(
-        point_values: &Vec<Vec<T>>,
+        // Generics
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
-        mut point: [T; N],
         polling: Option<Polling>,
+        // Specifics
+        point_values: &Vec<Vec<T>>,
+        mut point: [T; N],
     ) -> (f64, [T; N]) {
         // Could just `assert!(N>0)` and not handle it, but this handles it fine.
         if 0 == point_values.len() {
@@ -122,37 +119,49 @@ pub fn grid_search<
 
         let thread_exit = Arc::new(AtomicBool::new(false));
         // (handles,counters)
-        let (handles, links): (Vec<_>, Vec<(Arc<AtomicU64>, Arc<Mutex<f64>>)>) = point_values[0]
+        let (handles, links): (Vec<_>,Vec<_>) = point_values[0]
             .iter()
             .map(|p_value| {
                 point[0] = *p_value;
                 let point_values_clone = point_values.clone();
                 let counter = Arc::new(AtomicU64::new(0));
                 let thread_best = Arc::new(Mutex::new(f64::MAX));
+                let thread_execution_position = Arc::new(AtomicU8::new(0));
+                let thread_execution_time = Arc::new([
+                    Mutex::new((Duration::new(0,0),0)),
+                    Mutex::new((Duration::new(0,0),0))
+                ]);
 
                 let counter_clone = counter.clone();
                 let thread_best_clone = thread_best.clone();
                 let thread_exit_clone = thread_exit.clone();
                 let evaluation_data_clone = evaluation_data.clone();
+                let thread_execution_position_clone = thread_execution_position.clone();
+                let thread_execution_time_clone = thread_execution_time.clone();
                 (
                     thread::spawn(move || {
                         search(
+                            // Generics
                             &point_values_clone,
                             f,
                             evaluation_data_clone,
-                            point,
-                            1,
                             counter_clone,
                             thread_best_clone,
                             thread_exit_clone,
+                            thread_execution_position_clone,
+                            thread_execution_time_clone,
+                            // Specifics
+                            point,
+                            1,
                         )
                     }),
-                    (counter, thread_best),
+                    (counter, (thread_best,(thread_execution_position, thread_execution_time))),
                 )
             })
             .unzip();
-        let (counters, thread_bests): (Vec<Arc<AtomicU64>>, Vec<Arc<Mutex<f64>>>) =
-            links.into_iter().unzip();
+        let (counters, links): (Vec<Arc<AtomicU64>>, Vec<_>) = links.into_iter().unzip();
+        let (thread_bests, links): (Vec<Arc<Mutex<f64>>>, Vec<_>) = links.into_iter().unzip();
+        let (thread_execution_positions, thread_execution_times) = links.into_iter().unzip();
 
         if let Some(poll_data) = polling {
             let iterations = point_values.iter().map(|pvs| pvs.len() as u64).product();
@@ -163,6 +172,8 @@ pub fn grid_search<
                 iterations,
                 thread_bests,
                 thread_exit,
+                thread_execution_positions,
+                thread_execution_times
             );
         }
 
@@ -194,14 +205,18 @@ pub fn grid_search<
             + num::FromPrimitive,
         const N: usize,
     >(
+        // Generics
         point_values: &Vec<Vec<T>>,
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
-        mut point: [T; N],
-        index: usize,
         counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
+        thread_execution_position: Arc<AtomicU8>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>;2]>,
+        // Specifics
+        mut point: [T; N],
+        index: usize,
     ) -> (f64, [T; N]) {
         if index == point_values.len() {
             // panic!("hit here");
@@ -217,11 +232,13 @@ pub fn grid_search<
                 point_values,
                 f,
                 evaluation_data.clone(),
-                point,
-                index + 1,
                 counter.clone(),
                 best.clone(),
                 thread_exit.clone(),
+                thread_execution_position.clone(),
+                thread_execution_times.clone(),
+                point,
+                index + 1,
             );
             if value < best_value {
                 best_value = value;
