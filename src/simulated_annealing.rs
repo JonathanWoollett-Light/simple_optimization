@@ -2,9 +2,19 @@ use itertools::izip;
 use rand::{distributions::uniform::SampleUniform, thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 
-use std::{convert::TryInto, f64, ops::{Range, Sub}, sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering}}, thread, time::{Duration, Instant}};
+use std::{
+    convert::TryInto,
+    f64,
+    ops::{Range, Sub},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
+        Arc, Mutex,
+    },
+    thread,
+    time::{Duration, Instant},
+};
 
-use crate::util::{poll, Polling, update_execution_position};
+use crate::util::{poll, update_execution_position, Polling};
 
 /// Cooling schedule for simulated annealing.
 #[derive(Clone, Copy)]
@@ -104,7 +114,11 @@ pub fn simulated_annealing<
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
         Arc::new(AtomicU8::new(0)),
-        Arc::new([Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0))]),
+        Arc::new([
+            Mutex::new((Duration::new(0, 0), 0)),
+            Mutex::new((Duration::new(0, 0), 0)),
+            Mutex::new((Duration::new(0, 0), 0)),
+        ]),
         // Specifics
         starting_temperature,
         minimum_temperature,
@@ -113,16 +127,16 @@ pub fn simulated_annealing<
         variance,
     );
 
-    let (handles, links): (Vec<_>,Vec<_>) = (0..search_cpus)
+    let (handles, links): (Vec<_>, Vec<_>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
             let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
             let thread_execution_position = Arc::new(AtomicU8::new(0));
             let thread_execution_time = Arc::new([
-                Mutex::new((Duration::new(0,0),0)),
-                Mutex::new((Duration::new(0,0),0)),
-                Mutex::new((Duration::new(0,0),0))
+                Mutex::new((Duration::new(0, 0), 0)),
+                Mutex::new((Duration::new(0, 0), 0)),
+                Mutex::new((Duration::new(0, 0), 0)),
             ]);
 
             let counter_clone = counter.clone();
@@ -151,7 +165,13 @@ pub fn simulated_annealing<
                         variance,
                     )
                 }),
-                (counter, (thread_best,(thread_execution_position, thread_execution_time))),
+                (
+                    counter,
+                    (
+                        thread_best,
+                        (thread_execution_position, thread_execution_time),
+                    ),
+                ),
             )
         })
         .unzip();
@@ -168,7 +188,7 @@ pub fn simulated_annealing<
             thread_bests,
             thread_exit,
             thread_execution_positions,
-            thread_execution_times
+            thread_execution_times,
         );
     }
 
@@ -208,7 +228,7 @@ pub fn simulated_annealing<
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
         thread_execution_position: Arc<AtomicU8>,
-        thread_execution_times: Arc<[Mutex<(Duration, u64)>;3]>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>; 3]>,
         // Specific
         starting_temperature: f64,
         minimum_temperature: f64,
@@ -258,7 +278,12 @@ pub fn simulated_annealing<
             // Iterate over samples from this temperature
             for _ in 0..samples_per_temperature {
                 // Update execution position
-                execution_position_timer = update_execution_position(0, execution_position_timer, &thread_execution_position, &thread_execution_times);
+                execution_position_timer = update_execution_position(
+                    1,
+                    execution_position_timer,
+                    &thread_execution_position,
+                    &thread_execution_times,
+                );
 
                 // Samples new point
                 let mut point = [Default::default(); N];
@@ -268,16 +293,25 @@ pub fn simulated_annealing<
                 }
 
                 // Update execution position
-                execution_position_timer = update_execution_position(1, execution_position_timer, &thread_execution_position, &thread_execution_times);
+                execution_position_timer = update_execution_position(
+                    2,
+                    execution_position_timer,
+                    &thread_execution_position,
+                    &thread_execution_times,
+                );
 
                 // Evaluates new point
                 let value = f(&point, evaluation_data.clone());
 
                 // Update execution position
-                execution_position_timer = update_execution_position(2, execution_position_timer, &thread_execution_position, &thread_execution_times);
+                execution_position_timer = update_execution_position(
+                    3,
+                    execution_position_timer,
+                    &thread_execution_position,
+                    &thread_execution_times,
+                );
                 // Increment counter
                 counter.fetch_add(1, Ordering::SeqCst);
-
 
                 // Update:
                 // - if there is any progression
@@ -301,6 +335,9 @@ pub fn simulated_annealing<
             step += 1;
             temperature = cooling_schedule.decay(starting_temperature, temperature, step);
         }
+        // Update execution position
+        // 0 represents ended state
+        thread_execution_position.store(0, Ordering::SeqCst);
         return (best_value, best_point);
     }
 

@@ -8,10 +8,10 @@ use std::{
         Arc, Mutex,
     },
     thread,
-    time::Duration
+    time::Duration,
 };
 
-use crate::util::{poll, Polling, update_execution_position};
+use crate::util::{poll, update_execution_position, Polling};
 
 /// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
@@ -29,8 +29,8 @@ use crate::util::{poll, Polling, update_execution_position};
 ///     [0f64..10f64, 5f64..15f64, 10f64..20f64], // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, //  No additional evaluation data.
-///     // Polling every `10ms`, print progress (`true`) and exit early if `15.` or less is reached.
-///     Some(Polling { poll_rate: 5, printing: true, early_exit_minimum: Some(15.) }),
+///     // Polling every `10ms`, printing progress (`true`), exiting early if `15.` or less is reached, and not printing thread execution data (`false`).
+///     Some(Polling { poll_rate: 5, printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
 ///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.
@@ -86,7 +86,7 @@ pub fn grid_search<
     for (s, p) in start.iter_mut().zip(point_values.iter()) {
         *s = p[0];
     }
-    let (_, params) = thread_search(f, evaluation_data, polling, &point_values,start);
+    let (_, params) = thread_search(f, evaluation_data, polling, &point_values, start);
     return params;
 
     fn thread_search<
@@ -119,7 +119,7 @@ pub fn grid_search<
 
         let thread_exit = Arc::new(AtomicBool::new(false));
         // (handles,counters)
-        let (handles, links): (Vec<_>,Vec<_>) = point_values[0]
+        let (handles, links): (Vec<_>, Vec<_>) = point_values[0]
             .iter()
             .map(|p_value| {
                 point[0] = *p_value;
@@ -128,8 +128,8 @@ pub fn grid_search<
                 let thread_best = Arc::new(Mutex::new(f64::MAX));
                 let thread_execution_position = Arc::new(AtomicU8::new(0));
                 let thread_execution_time = Arc::new([
-                    Mutex::new((Duration::new(0,0),0)),
-                    Mutex::new((Duration::new(0,0),0))
+                    Mutex::new((Duration::new(0, 0), 0)),
+                    Mutex::new((Duration::new(0, 0), 0)),
                 ]);
 
                 let counter_clone = counter.clone();
@@ -155,7 +155,13 @@ pub fn grid_search<
                             1,
                         )
                     }),
-                    (counter, (thread_best,(thread_execution_position, thread_execution_time))),
+                    (
+                        counter,
+                        (
+                            thread_best,
+                            (thread_execution_position, thread_execution_time),
+                        ),
+                    ),
                 )
             })
             .unzip();
@@ -173,7 +179,7 @@ pub fn grid_search<
                 thread_bests,
                 thread_exit,
                 thread_execution_positions,
-                thread_execution_times
+                thread_execution_times,
             );
         }
 
@@ -213,7 +219,7 @@ pub fn grid_search<
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
         thread_execution_position: Arc<AtomicU8>,
-        thread_execution_times: Arc<[Mutex<(Duration, u64)>;2]>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>; 2]>,
         // Specifics
         mut point: [T; N],
         index: usize,

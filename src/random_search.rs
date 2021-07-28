@@ -8,10 +8,10 @@ use std::{
         Arc, Mutex,
     },
     thread,
-    time::{Duration, Instant}
+    time::{Duration, Instant},
 };
 
-use crate::util::{poll, Polling, update_execution_position};
+use crate::util::{poll, update_execution_position, Polling};
 
 /// [Random search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Random_search)
 ///
@@ -62,23 +62,29 @@ pub fn random_search<
         Arc::new(Mutex::new(Default::default())),
         Arc::new(AtomicBool::new(false)),
         Arc::new(AtomicU8::new(0)),
-        Arc::new([Mutex::new((Duration::new(0,0),0)),Mutex::new((Duration::new(0,0),0))]),
+        Arc::new([
+            Mutex::new((Duration::new(0, 0), 0)),
+            Mutex::new((Duration::new(0, 0), 0)),
+            Mutex::new((Duration::new(0, 0), 0)),
+            Mutex::new((Duration::new(0, 0), 0)),
+        ]),
         // Specifics
         remainder,
-        
     );
 
     let thread_exit = Arc::new(AtomicBool::new(false));
     // (handles,(counters,thread_bests))
-    let (handles, links): (Vec<_>,Vec<_>) = (0..search_cpus)
+    let (handles, links): (Vec<_>, Vec<_>) = (0..search_cpus)
         .map(|_| {
             let ranges_clone = ranges_arc.clone();
             let counter = Arc::new(AtomicU64::new(0));
             let thread_best = Arc::new(Mutex::new(f64::MAX));
             let thread_execution_position = Arc::new(AtomicU8::new(0));
             let thread_execution_time = Arc::new([
-                Mutex::new((Duration::new(0,0),0)),
-                Mutex::new((Duration::new(0,0),0))
+                Mutex::new((Duration::new(0, 0), 0)),
+                Mutex::new((Duration::new(0, 0), 0)),
+                Mutex::new((Duration::new(0, 0), 0)),
+                Mutex::new((Duration::new(0, 0), 0)),
             ]);
 
             let counter_clone = counter.clone();
@@ -103,7 +109,13 @@ pub fn random_search<
                         per,
                     )
                 }),
-                (counter, (thread_best,(thread_execution_position, thread_execution_time))),
+                (
+                    counter,
+                    (
+                        thread_best,
+                        (thread_execution_position, thread_execution_time),
+                    ),
+                ),
             )
         })
         .unzip();
@@ -120,7 +132,7 @@ pub fn random_search<
             thread_bests,
             thread_exit,
             thread_execution_positions,
-            thread_execution_times
+            thread_execution_times,
         );
     }
 
@@ -151,7 +163,7 @@ pub fn random_search<
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
         thread_execution_position: Arc<AtomicU8>,
-        thread_execution_times: Arc<[Mutex<(Duration, u64)>;2]>,
+        thread_execution_times: Arc<[Mutex<(Duration, u64)>; 4]>,
         // Specifics
         iterations: u64,
     ) -> (f64, [T; N]) {
@@ -168,13 +180,23 @@ pub fn random_search<
             }
 
             // Update execution position
-            execution_position_timer = update_execution_position(0, execution_position_timer, &thread_execution_position, &thread_execution_times);
+            execution_position_timer = update_execution_position(
+                1,
+                execution_position_timer,
+                &thread_execution_position,
+                &thread_execution_times,
+            );
 
             // Run function
             let new_value = f(&params, evaluation_data.clone());
 
             // Update execution position
-            execution_position_timer = update_execution_position(1, execution_position_timer, &thread_execution_position, &thread_execution_times);
+            execution_position_timer = update_execution_position(
+                2,
+                execution_position_timer,
+                &thread_execution_position,
+                &thread_execution_times,
+            );
 
             // Check best
             if new_value < best_value {
@@ -182,11 +204,32 @@ pub fn random_search<
                 best_params = params;
                 *best.lock().unwrap() = best_value;
             }
+
+            // Update execution position
+            execution_position_timer = update_execution_position(
+                3,
+                execution_position_timer,
+                &thread_execution_position,
+                &thread_execution_times,
+            );
+
             counter.fetch_add(1, Ordering::SeqCst);
+
+            // Update execution position
+            execution_position_timer = update_execution_position(
+                4,
+                execution_position_timer,
+                &thread_execution_position,
+                &thread_execution_times,
+            );
+
             if thread_exit.load(Ordering::SeqCst) {
                 break;
             }
         }
+        // Update execution position
+        // 0 represents ended state
+        thread_execution_position.store(0, Ordering::SeqCst);
         return (best_value, best_params);
     }
 }
