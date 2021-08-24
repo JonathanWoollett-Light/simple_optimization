@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-use crate::util::{poll, update_execution_position, Polling};
+use crate::util::{poll, Polling};
 
 /// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
@@ -22,7 +22,7 @@ use crate::util::{poll, update_execution_position, Polling};
 ///
 /// Printing progress every `10ms` and exiting early if a value is found which is less than or equal to `15.`.
 /// ```
-/// use std::sync::Arc;
+/// use std::{sync::Arc,time::Duration};
 /// use simple_optimization::{grid_search, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
 /// let best = grid_search(
@@ -30,7 +30,7 @@ use crate::util::{poll, update_execution_position, Polling};
 ///     simple_function, // Evaluation function.
 ///     None, //  No additional evaluation data.
 ///     // Polling every `10ms`, printing progress (`true`), exiting early if `15.` or less is reached, and not printing thread execution data (`false`).
-///     Some(Polling { poll_rate: 5, printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
+///     Some(Polling { poll_rate: Duration::from_millis(5), printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
 ///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.

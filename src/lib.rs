@@ -6,6 +6,11 @@
 //!
 //! I made this since alternatives in the Rust ecosystem seemed awkward. I'm just some random dude, don't expect too much.
 //!
+//! Currently looking into adding macros `random_search!`, `grid_search!`, etc.
+//!
+//! These will allow you to optimize a tuple of ranges instead of an array, therefore allowing varying types.
+//! This is likely to come before gaussian optimization.
+//!
 //! ## Basic guide
 //!
 //! All the functions have the approximate form:
@@ -22,8 +27,8 @@
 //!     f: fn(&[T; N], Option<Arc<A>>) -> f64,
 //!     // The additional data for the evaluation function.
 //!     evaluation_data: Option<Arc<A>>,
-//!     // How often (if at all) you want to poll and print progress.
-//!     polling: Option<u64>,
+//!     // Polling data, e.g. how often (if at all) you want to print progress.
+//!     polling: Option<Polling>,
 //!     // If this value is reached, the function exits immediately.
 //!     // When this is `None` if a random search hit the optimum on its first guess
 //!     //  it would still continue to guess many more times (however many you set)

@@ -27,13 +27,13 @@ pub fn update_execution_position<const N: usize>(
 }
 
 pub struct Polling {
-    pub poll_rate: u64,
+    pub poll_rate: Duration,
     pub printing: bool,
     pub early_exit_minimum: Option<f64>,
     pub thread_execution_reporting: bool,
 }
 impl Polling {
-    const DEFAULT_POLL_RATE: u64 = 10;
+    const DEFAULT_POLL_RATE: Duration = Duration::from_millis(10);
     pub fn new(printing: bool, early_exit_minimum: Option<f64>) -> Self {
         Self {
             poll_rate: Polling::DEFAULT_POLL_RATE,
@@ -192,10 +192,7 @@ pub fn poll<const N: usize>(
             (None, false) => {}
         }
 
-        thread::sleep(saturating_sub(
-            Duration::from_millis(data.poll_rate),
-            poll_time.elapsed(),
-        ));
+        thread::sleep(saturating_sub(data.poll_rate, poll_time.elapsed()));
         poll_time = Instant::now();
 
         count = offset
