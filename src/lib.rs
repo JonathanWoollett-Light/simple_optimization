@@ -27,16 +27,30 @@
 //!     f: fn(&[T; N], Option<Arc<A>>) -> f64,
 //!     // The additional data for the evaluation function.
 //!     evaluation_data: Option<Arc<A>>,
-//!     // Polling data, e.g. how often (if at all) you want to print progress.
+//!     // Polling data, e.g. how often (if at all) you want to print progress, see `Polling` struct docs for more info.
 //!     polling: Option<Polling>,
-//!     // If this value is reached, the function exits immediately.
-//!     // When this is `None` if a random search hit the optimum on its first guess
-//!     //  it would still continue to guess many more times (however many you set)
-//!     //  before returning.
-//!     early_exit_minimum: Option<f64>,
+//!     // The number of threads you want to use, leaving this as `None` uses maximum (and is probably best). If set it must be >=2.
+//!     threads: Option<usize>,
 //!     // ...
 //! ) -> [T;N] { /* ... */}
 //! ```
+//! The most thorough output of progress might look like:
+//! ```ignore
+//!  2300
+//!   565 (24.57%) 00:00:11 / 00:00:47 [25.600657363049734] { [563.0ns, 561.3ms, 125.0ns, 110.0ns] [2.0µs, 361.8ms, 374.0ns, 405.0ns] [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] }
+//! ```
+//! This output describes:
+//! 
+//! - The total number of iterations `2300`.
+//! - The total number of completed iterations `565`.
+//! - The percent of iterations completed `(24.57%)`. 
+//! - The time running `00:00:11` (`mm:ss:ms`).
+//! - The estimated time remaining `00:00:47` (`mm:ss:ms`).
+//! - The current best value `[25.600657363049734]`.
+//! - The most recently measured times between execution positions (effectively time taken for thread to go from some line, to another line (defined specifically with `update_execution_position` in the code) `[563.0ns, 561.3ms, 125.0ns, 110.0ns]`.
+//! - The averages times between execution positions (this is average across entire runtime rather than since last measured) `[2.0µs, 361.8ms, 374.0ns, 405.0ns]`.
+//! - The execution positions of threads (`0` is when a thread is completed, rest represent a thread having hit some line, which triggered this setting, but yet to hit next line which changes it, effectively being between 2 positions) (`[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`). What these specifically refer to in code varies between functions.
+
 mod grid_search;
 mod random_search;
 mod simulated_annealing;

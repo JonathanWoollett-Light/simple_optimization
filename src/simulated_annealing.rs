@@ -45,7 +45,7 @@ impl CoolingSchedule {
 // TODO Multi-thread this
 /// [Simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing)
 ///
-/// Run simulated annealing starting at temperature `100.` decaying with a fast cooling schedule (`CoolingSchedule::Fast`) until reach a minimum temperature of `1.`, taking `100` samples at each temperature, with a variance in sampling of `1.`.
+/// Run simulated annealing starting at temperature `100.` decaying with a fast cooling schedule until reach a minimum temperature of `1.`, taking `100` samples at each temperature, with a variance in sampling of `1.`.
 /// ```
 /// use std::sync::Arc;
 /// use simple_optimization::{simulated_annealing, Polling};

@@ -26,19 +26,44 @@ pub fn update_execution_position<const N: usize>(
     Instant::now()
 }
 
+/// The struct defining polling data.
 pub struct Polling {
+    /// How often to poll the process.
     pub poll_rate: Duration,
+    /// If to print progress.
     pub printing: bool,
+    /// If to exit execution if the evaluation function produces a value less than or equal to the given value.
     pub early_exit_minimum: Option<f64>,
+    /// If to print thread execution information.
     pub thread_execution_reporting: bool,
 }
 impl Polling {
     const DEFAULT_POLL_RATE: Duration = Duration::from_millis(10);
+    /// Default but giving `printing` and `early_exit_minimum`.
     pub fn new(printing: bool, early_exit_minimum: Option<f64>) -> Self {
         Self {
             poll_rate: Polling::DEFAULT_POLL_RATE,
             printing,
             early_exit_minimum,
+            thread_execution_reporting: false,
+        }
+    }
+}
+impl Default for Polling {
+    /// The typical parameters you might want.
+    /// ```ignore
+    /// Self {
+    ///     poll_rate: Polling::DEFAULT_POLL_RATE, // `Duration::from_millis(10);`
+    ///     printing: true,
+    ///     early_exit_minimum: None,
+    ///     thread_execution_reporting: false,
+    /// }
+    /// ```
+    fn default() -> Self {
+        Self {
+            poll_rate: Polling::DEFAULT_POLL_RATE,
+            printing: true,
+            early_exit_minimum: None,
             thread_execution_reporting: false,
         }
     }
