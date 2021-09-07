@@ -116,6 +116,21 @@ mod tests {
     // Random search
     // ---------------------------------------
     #[test]
+    fn random_search_macro_simple() {
+        // for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::random_search_macro!(
+                simple_function,
+                None,
+                Some(Polling::new(false, Some(19.))),
+                1000,
+                (0f64..10f64, 5f64..15f64, 10f64..20f64)
+            );
+            assert!(simple_function(&best, None) < 19.);
+        // }
+    }
+    // Random search
+    // ---------------------------------------
+    #[test]
     fn random_search_simple() {
         for _ in 0..CHECK_ITERATIONS {
             let best = simple_optimization::random_search(
