@@ -26,6 +26,7 @@ use crate::util::{poll, update_execution_position, Polling};
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(true,Some(19.))),
+///     None,
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
@@ -40,11 +41,20 @@ pub fn random_search<
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
     polling: Option<Polling>,
+    threads: Option<usize>,
     // Specifics
     iterations: u64,
 ) -> [T; N] {
     // Gets cpu data
-    let cpus = num_cpus::get() as u64;
+    let cpus = if let Some(given_threads) = threads {
+        assert!(
+            given_threads >= 2,
+            "Due to fundamentally multi-threaded design, need at least 2 threads"
+        );
+        given_threads as u64
+    } else {
+        num_cpus::get() as u64
+    };
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let remainder = iterations % search_cpus;

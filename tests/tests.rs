@@ -123,6 +123,7 @@ mod tests {
                 simple_function,
                 None,
                 Some(Polling::new(false, Some(19.))),
+                None,
                 1000,
             );
             assert!(simple_function(&best, None) < 19.);
@@ -136,6 +137,7 @@ mod tests {
                 simple_function_u8,
                 None,
                 Some(Polling::new(false, Some(15.))),
+                None,
                 1000,
             );
             assert!(simple_function_u8(&best, None) < 18.);
@@ -155,6 +157,7 @@ mod tests {
                 complex_function,
                 None,
                 Some(Polling::new(false, Some(-18.))),
+                None,
                 1000,
             );
             assert!(complex_function(&best, None) < -17.);
@@ -168,6 +171,7 @@ mod tests {
                 complex_function_u8,
                 None,
                 Some(Polling::new(false, Some(-17.))),
+                None,
                 1000,
             );
             // -17.001623699962504
@@ -184,6 +188,7 @@ mod tests {
                 boundary_function,
                 images.clone(),
                 Some(Polling::new(false, Some(0.))),
+                None,
                 1000,
             );
             // Since we have 15 lines of 5 the error values are: 0*15, 1*15, 2*15, 3*15, 4*15, 5*15
@@ -269,6 +274,7 @@ mod tests {
                 simple_function,
                 None,
                 Some(Polling::new(false, Some(17.))),
+                None,
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
@@ -286,6 +292,7 @@ mod tests {
                 simple_function_u8,
                 None,
                 Some(Polling::new(false, Some(16.))),
+                None,
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
@@ -309,6 +316,7 @@ mod tests {
                 complex_function,
                 None,
                 Some(Polling::new(false, Some(-20.))),
+                None,
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
@@ -326,6 +334,7 @@ mod tests {
                 complex_function_u8,
                 None,
                 Some(Polling::new(false, Some(-19.))),
+                None,
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,
@@ -345,6 +354,7 @@ mod tests {
                 boundary_function,
                 images.clone(),
                 Some(Polling::new(false, Some(0.))),
+                None,
                 100.,
                 1.,
                 simple_optimization::CoolingSchedule::Fast,

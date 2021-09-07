@@ -58,6 +58,7 @@ impl CoolingSchedule {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(false,Some(17.))),
+///     None,
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
@@ -88,6 +89,7 @@ pub fn simulated_annealing<
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
     polling: Option<Polling>,
+    threads: Option<usize>,
     // Specific
     starting_temperature: f64,
     minimum_temperature: f64,
@@ -95,7 +97,15 @@ pub fn simulated_annealing<
     samples_per_temperature: u64,
     variance: f64,
 ) -> [T; N] {
-    let cpus = num_cpus::get() as u64;
+    let cpus = if let Some(given_threads) = threads {
+        assert!(
+            given_threads >= 2,
+            "Due to fundamentally multi-threaded design, need at least 2 threads"
+        );
+        given_threads as u64
+    } else {
+        num_cpus::get() as u64
+    };
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);

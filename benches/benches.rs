@@ -131,6 +131,7 @@ fn random_search_simple_function() {
         simple_function,
         None,
         Some(Polling::new(false, Some(SIMPLE_EXIT))),
+        None,
         LIMIT,
     );
 }
@@ -146,6 +147,7 @@ fn random_search_complex_function() {
         complex_function,
         None,
         Some(Polling::new(false, Some(COMPLEX_EXIT))),
+        None,
         LIMIT,
     );
 }
@@ -156,6 +158,7 @@ fn random_search_boundary() {
         boundary_function,
         images.clone(),
         Some(Polling::new(false, Some(0.))),
+        None,
         1000,
     );
 }
@@ -163,6 +166,7 @@ fn random_search_big() {
     let _best = simple_optimization::random_search(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
         None,
         None,
         BIG_LIMIT, // billion
@@ -229,6 +233,7 @@ fn simulated_annealing_simple_function() {
         simple_function,
         None,
         Some(Polling::new(false, Some(SIMPLE_EXIT))),
+        None,
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
@@ -248,6 +253,7 @@ fn simulated_annealing_complex_function() {
         complex_function,
         None,
         Some(Polling::new(false, Some(COMPLEX_EXIT))),
+        None,
         SIMULATED_ANNEALING_LIMIT.0,
         SIMULATED_ANNEALING_LIMIT.1,
         simple_optimization::CoolingSchedule::Fast,
@@ -262,6 +268,7 @@ fn simulated_annealing_boundary() {
         boundary_function,
         images.clone(),
         Some(Polling::new(false, Some(0.))),
+        None,
         100.,
         1.,
         simple_optimization::CoolingSchedule::Fast,
@@ -273,6 +280,7 @@ fn simulated_annealing_big() {
     let _best = simple_optimization::simulated_annealing(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
         None,
         None,
         100.,

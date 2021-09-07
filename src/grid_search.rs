@@ -38,6 +38,7 @@ use crate::util::{poll, Polling};
 /// );
 /// assert_eq!(simple_function(&best, None), 15.);
 /// ```
+/// Due to specific design the `threads` parameter is excluded for now.
 pub fn grid_search<
     A: 'static + Send + Sync,
     T: 'static
