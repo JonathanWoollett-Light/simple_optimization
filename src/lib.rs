@@ -34,6 +34,11 @@
 //!     // ...
 //! ) -> [T;N] { /* ... */}
 //! ```
+//! The typical use case will be run with `--nocapture` (without this progress logging will not print), e.g.:
+//! - `cargo run --nocapture`
+//! - `cargo run --release -- --nocapture`
+//! - `cargo test your_test --release -- --nocapture`
+//!
 //! The most thorough output of progress might look like:
 //! ```ignore
 //!  2300
@@ -43,13 +48,15 @@
 //! 
 //! - The total number of iterations `2300`.
 //! - The total number of completed iterations `565`.
-//! - The percent of iterations completed `(24.57%)`. 
-//! - The time running `00:00:11` (`mm:ss:ms`).
-//! - The estimated time remaining `00:00:47` (`mm:ss:ms`).
+//! - The percent of iterations completed `(24.57%)` (`565/2300=0.2457...`). 
+//! - The time running `00:00:11` (`hh:mm:ss`).
+//! - The estimated time remaining `00:00:47` (`hh:mm:ss`).
 //! - The current best value `[25.600657363049734]`.
 //! - The most recently measured times between execution positions (effectively time taken for thread to go from some line, to another line (defined specifically with `update_execution_position` in the code) `[563.0ns, 561.3ms, 125.0ns, 110.0ns]`.
 //! - The averages times between execution positions (this is average across entire runtime rather than since last measured) `[2.0µs, 361.8ms, 374.0ns, 405.0ns]`.
 //! - The execution positions of threads (`0` is when a thread is completed, rest represent a thread having hit some line, which triggered this setting, but yet to hit next line which changes it, effectively being between 2 positions) (`[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`). What these specifically refer to in code varies between functions.
+//! 
+//! The last 3 of these I wouldn't expect you would ever use. But I use them for debugging this library and I think they could possibly in some rare circumstance be useful to you (so no harm having them as an option, well, only a few microseconds/nanoseconds of harm).
 
 mod grid_search;
 mod random_search;
