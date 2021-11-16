@@ -42,6 +42,70 @@ impl CoolingSchedule {
     }
 }
 
+/// Castes all given ranges to `f64` values and calls `simulated_annealing`.
+/// ```
+/// use std::sync::Arc;
+/// use simple_optimization::{simulated_annealing_m, Polling};
+/// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 {
+///  list.iter().sum()
+/// }
+/// let best = simulated_annealing_m!(
+///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
+///     simple_function, // Evaluation function.
+///     None, // No additional evaluation data.
+///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
+///     Some(Polling::new(false,Some(17.))),
+///     None,
+///     100., // Starting temperature is `100.`.
+///     1., // Minimum temperature is `1.`.
+///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
+///     // Take `100` samples per temperature
+///     // This is split between threads, so each thread only samples
+///     //  `100/n` at each temperature.
+///     100,
+///     1., // Variance in sampling.
+/// );
+/// assert!(simple_function(&best, None) < 19.);
+/// ```
+#[macro_export]
+macro_rules! simulated_annealing_m {
+    (
+        // Generic
+        ($($x:expr),*),
+        $f: expr,
+        $evaluation_data: expr,
+        $polling: expr,
+        $threads: expr,
+        // Specific
+        $starting_temperature: expr,
+        $minimum_temperature: expr,
+        $cooling_schedule: expr,
+        $samples_per_temperature: expr,
+        $variance: expr,
+    ) => {
+        {
+            use num::ToPrimitive;
+            let mut ranges = [
+                $(
+                    $x.start.to_f64().unwrap()..$x.end.to_f64().unwrap(),
+                )*
+            ];
+            simple_optimization::simulated_annealing(
+                ranges,
+                $f,
+                $evaluation_data,
+                $polling,
+                $threads,
+                $starting_temperature,
+                $minimum_temperature,
+                $cooling_schedule,
+                $samples_per_temperature,
+                $variance
+            )
+        }
+    };
+}
+
 // TODO Multi-thread this
 /// [Simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing)
 ///

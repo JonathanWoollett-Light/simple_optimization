@@ -13,6 +13,54 @@ use std::{
 
 use crate::util::{poll, Polling};
 
+/// Castes all given ranges to `f64` values and calls `grid_search`.
+/// ```
+/// use std::{sync::Arc,time::Duration};
+/// use simple_optimization::{grid_search_m, Polling};
+/// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
+/// let best = grid_search_m!(
+///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
+///     simple_function, // Evaluation function.
+///     None, //  No additional evaluation data.
+///     // Polling every `10ms`, printing progress (`true`), exiting early if `15.` or less is reached, and not printing thread execution data (`false`).
+///     Some(Polling { poll_rate: Duration::from_millis(5), printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
+///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
+///     //  and `12` along range `2` (`10..20`).
+///     // In total taking `10*11*12=1320` samples.
+///     [10,11,12],
+/// );
+/// assert_eq!(simple_function(&best, None), 15.);
+/// ```
+/// Due to specific design the `threads` parameter is excluded for now.
+#[macro_export]
+macro_rules! grid_search_m {
+    (
+        // Generic
+        ($($x:expr),*),
+        $f: expr,
+        $evaluation_data: expr,
+        $polling: expr,
+        // Specific
+        $points: expr,
+    ) => {
+        {
+            use num::ToPrimitive;
+            let mut ranges = [
+                $(
+                    $x.start.to_f64().unwrap()..$x.end.to_f64().unwrap(),
+                )*
+            ];
+            simple_optimization::grid_search(
+                ranges,
+                $f,
+                $evaluation_data,
+                $polling,
+                $points,
+            )
+        }
+    };
+}
+
 /// [Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)
 ///
 /// Evaluate all combinations of values from the 3 values where:

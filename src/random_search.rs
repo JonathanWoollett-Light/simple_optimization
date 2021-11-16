@@ -13,6 +13,54 @@ use std::{
 
 use crate::util::{poll, update_execution_position, Polling};
 
+
+/// Castes all given ranges to `f64` values and calls `random_search`.
+/// ```
+/// use std::sync::Arc;
+/// use simple_optimization::{random_search_m, Polling};
+/// fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
+/// let best = random_search_m!(
+///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
+///     simple_function, // Evaluation function.
+///     None, // No additional evaluation data.
+///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
+///     Some(Polling::new(true,Some(19.))),
+///     None,
+///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
+/// );
+/// assert!(simple_function(&best, None) < 19.);
+/// ```
+#[macro_export]
+macro_rules! random_search_m {
+    (
+        // Generic
+        ($($x:expr),*),
+        $f: expr,
+        $evaluation_data: expr,
+        $polling: expr,
+        $threads: expr,
+        // Specific
+        $iterations: expr,
+    ) => {
+        {
+            use num::ToPrimitive;
+            let mut ranges = [
+                $(
+                    $x.start.to_f64().unwrap()..$x.end.to_f64().unwrap(),
+                )*
+            ];
+            simple_optimization::random_search(
+                ranges,
+                $f,
+                $evaluation_data,
+                $polling,
+                $threads,
+                $iterations
+            )
+        }
+    };
+}
+
 /// [Random search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Random_search)
 ///
 /// Randomly pick parameters for `simple_function` in the ranges `0..5`, `5..15`, and `10..20` and return the parameters which produce the minimum result from `simple_function` out of `10,000` samples, printing progress every `10ms`, and exiting early if a value is found which is less than or equal to `19.`.
