@@ -161,15 +161,15 @@ pub fn simulated_annealing<
     samples_per_temperature: u64,
     variance: f64,
 ) -> [T; N] {
-    let cpus = if let Some(given_threads) = threads {
-        assert!(
-            given_threads >= 2,
-            "Due to fundamentally multi-threaded design, need at least 2 threads"
-        );
-        given_threads as u64
-    } else {
-        num_cpus::get() as u64
+    let cpus = match threads {
+        Some(t) => t as u64,
+        None => num_cpus::get() as u64,
     };
+    assert!(
+        cpus >= 2,
+        "Due to the fundamentally multi-threaded design, we need at least 2 threads"
+    );
+
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);

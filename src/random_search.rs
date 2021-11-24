@@ -13,7 +13,6 @@ use std::{
 
 use crate::util::{poll, update_execution_position, Polling};
 
-
 /// Castes all given ranges to `f64` values and calls `random_search`.
 /// ```
 /// use std::sync::Arc;
@@ -94,15 +93,15 @@ pub fn random_search<
     iterations: u64,
 ) -> [T; N] {
     // Gets cpu data
-    let cpus = if let Some(given_threads) = threads {
-        assert!(
-            given_threads >= 2,
-            "Due to fundamentally multi-threaded design, need at least 2 threads"
-        );
-        given_threads as u64
-    } else {
-        num_cpus::get() as u64
+    let cpus = match threads {
+        Some(t) => t as u64,
+        None => num_cpus::get() as u64,
     };
+    assert!(
+        cpus >= 2,
+        "Due to the fundamentally multi-threaded design, we need at least 2 threads"
+    );
+
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
     let remainder = iterations % search_cpus;
