@@ -6,6 +6,38 @@
 
 Some simple multi-threaded optimizers.
 
+
+You could do a random search like:
+```rust
+use std::sync::Arc;
+use simple_optimization::{random_search_m, Polling};
+// Our evaluation function takes 3 `f64`s and no additional data `()`.
+fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
+let best = random_search_m!(
+    (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
+    simple_function, // Evaluation function.
+    None, // No additional evaluation data.
+    // Every `10ms` we print progress and exit early if `simple_function` return a value less than `19.`.
+    Some(Polling::new(true,Some(19.))),
+    None, // We don't specify the number of threads to run.
+    1000, // Take `1000` samples.
+);
+assert!(simple_function(&best, None) < 19.);
+```
+Which during execution will give an output like:
+```
+1000
+ 500 (50.00%) 00:00:11 / 00:00:47 [25.600657363049734]
+```
+Representing:
+```
+<Total number of samples>
+<Current number of samples> (<Percentage of samples taken>) <Time running> / <ETA> [<Current best value>]
+```
+
+
+### Support
+
 Optimizer | Status
 ---|---
 [Random search](https://en.wikipedia.org/wiki/Random_search)|✅
