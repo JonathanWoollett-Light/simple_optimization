@@ -13,24 +13,24 @@ use std::{
 
 use crate::util::{poll, update_execution_position, Polling};
 
-/// Castes all given ranges to `f64` values and calls `random_search`.
+/// Castes all given ranges to `f64` values and calls [`random_search()`].
 /// ```
 /// use std::sync::Arc;
-/// use simple_optimization::{random_search_m, Polling};
+/// use simple_optimization::{random_search, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
-/// let best = random_search_m!(
+/// let best = random_search!(
 ///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(true,Some(19.))),
-///     None,
+///     None, // Don't specify the number of threads.
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
 /// ```
 #[macro_export]
-macro_rules! random_search_m {
+macro_rules! random_search {
     (
         // Generic
         ($($x:expr),*),
@@ -73,7 +73,7 @@ macro_rules! random_search_m {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(true,Some(19.))),
-///     None,
+///     None, // Don't specify the number of threads.
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);

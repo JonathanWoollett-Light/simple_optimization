@@ -32,7 +32,7 @@ pub struct Polling {
     pub poll_rate: Duration,
     /// If to print progress.
     pub printing: bool,
-    /// If to exit execution if the evaluation function produces a value less than or equal to the given value.
+    /// If to exit early if the evaluation function produces a value less than or equal to the given value.
     pub early_exit_minimum: Option<f64>,
     /// If to print thread execution information.
     pub thread_execution_reporting: bool,
@@ -289,7 +289,7 @@ pub fn poll<const N: usize>(
         stdout.flush().unwrap();
     }
 }
-// Since `Duration::saturating_sub` is unstable this is an alternative.
+/// Since `Duration::saturating_sub` is unstable this is an alternative.
 fn saturating_sub(a: Duration, b: Duration) -> Duration {
     if let Some(dur) = a.checked_sub(b) {
         dur

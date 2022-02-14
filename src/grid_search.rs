@@ -13,12 +13,12 @@ use std::{
 
 use crate::util::{poll, Polling};
 
-/// Castes all given ranges to `f64` values and calls `grid_search`.
+/// Castes all given ranges to `f64` values and calls [`grid_search()`].
 /// ```
 /// use std::{sync::Arc,time::Duration};
-/// use simple_optimization::{grid_search_m, Polling};
+/// use simple_optimization::{grid_search, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 { list.iter().sum() }
-/// let best = grid_search_m!(
+/// let best = grid_search!(
 ///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, //  No additional evaluation data.
@@ -33,7 +33,7 @@ use crate::util::{poll, Polling};
 /// ```
 /// Due to specific design the `threads` parameter is excluded for now.
 #[macro_export]
-macro_rules! grid_search_m {
+macro_rules! grid_search {
     (
         // Generic
         ($($x:expr),*),

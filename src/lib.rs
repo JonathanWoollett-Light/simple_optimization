@@ -27,9 +27,11 @@
 //!     f: fn(&[T; N], Option<Arc<A>>) -> f64,
 //!     // The additional data for the evaluation function.
 //!     evaluation_data: Option<Arc<A>>,
-//!     // Polling data, e.g. how often (if at all) you want to print progress, see `Polling` struct docs for more info.
+//!     // Polling data, e.g. how often (if at all) you want to print progress, see `Polling`
+//!     //  struct docs for more info.
 //!     polling: Option<Polling>,
-//!     // The number of threads you want to use, leaving this as `None` uses maximum (and is probably best). If set it must be >=2.
+//!     // The number of threads to use, leaving this as `None` uses all available (recommended).
+//!     //  If set it must be >=2.
 //!     threads: Option<usize>,
 //!     // ...
 //! ) -> [T;N] { /* ... */}

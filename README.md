@@ -6,14 +6,13 @@
 
 Some simple multi-threaded optimizers.
 
-
 You could do a random search like:
 ```rust
 use std::sync::Arc;
-use simple_optimization::{random_search_m, Polling};
+use simple_optimization::{random_search, Polling};
 // Our evaluation function takes 3 `f64`s and no additional data `()`.
 fn simple_function(list: &[f64; 3], _: Option<Arc::<()>>) -> f64 { list.iter().sum() }
-let best = random_search_m!(
+let best = random_search!(
     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
     simple_function, // Evaluation function.
     None, // No additional evaluation data.
@@ -41,10 +40,10 @@ Representing:
 Optimizer | Status
 ---|---
 [Random search](https://en.wikipedia.org/wiki/Random_search)|✅
-Grid search|✅
+[Grid search](https://en.wikipedia.org/wiki/Hyperparameter_optimization#Grid_search)|✅
 [Simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing)|✅
 [Bayesian optimization](https://en.wikipedia.org/wiki/Bayesian_optimization)|WIP
-[Gradient descrent](https://en.wikipedia.org/wiki/Gradient_descent)| [See my note here](https://github.com/JonathanWoollett-Light/cogent/blob/master/README.md#a-note)
+[Gradient descent](https://en.wikipedia.org/wiki/Gradient_descent)| [See my note here](https://github.com/JonathanWoollett-Light/cogent/blob/master/README.md#a-note)
 [Genetic algorithms](https://en.wikipedia.org/wiki/Genetic_algorithm)| No plans
 [Ant colony optimization](https://en.wikipedia.org/wiki/Ant_colony_optimization_algorithms)| No plans
 [Linear programming](https://en.wikipedia.org/wiki/Linear_programming)| No plans

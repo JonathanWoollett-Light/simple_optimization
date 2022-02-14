@@ -19,8 +19,11 @@ use crate::util::{poll, update_execution_position, Polling};
 /// Cooling schedule for simulated annealing.
 #[derive(Clone, Copy)]
 pub enum CoolingSchedule {
+    /// $ t_{n+1} = t \cdot \ln{\frac{\ln{2}}{s+1}} $
     Logarithmic,
+    /// $ t_{n+1} = x \cdot t $
     Exponential(f64),
+    /// $ t_n = \frac{t_1}{n} $
     Fast,
 }
 impl CoolingSchedule {
@@ -31,8 +34,8 @@ impl CoolingSchedule {
             Self::Fast => t_start / step as f64,
         }
     }
-    // Given temperature start and temperature min, gives number of steps of decay which will occur
-    //  before temperature start decays to be less than temperature min, then causing program to exit.
+    /// Given temperature start and temperature min, gives number of steps of decay which will occur
+    ///  before temperature start decays to be less than temperature min, then causing program to exit.
     fn steps(&self, t_start: f64, t_min: f64) -> u64 {
         match self {
             Self::Logarithmic => (((2f64).ln() * t_start / t_min).exp() - 1f64).ceil() as u64,
@@ -42,20 +45,20 @@ impl CoolingSchedule {
     }
 }
 
-/// Castes all given ranges to `f64` values and calls `simulated_annealing`.
+/// Castes all given ranges to `f64` values and calls [`simulated_annealing()`].
 /// ```
 /// use std::sync::Arc;
-/// use simple_optimization::{simulated_annealing_m, Polling};
+/// use simple_optimization::{simulated_annealing, Polling};
 /// fn simple_function(list: &[f64; 3], _: Option<Arc<()>>) -> f64 {
 ///  list.iter().sum()
 /// }
-/// let best = simulated_annealing_m!(
+/// let best = simulated_annealing!(
 ///     (0f64..10f64, 5u32..15u32, 10i16..20i16), // Value ranges.
 ///     simple_function, // Evaluation function.
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(false,Some(17.))),
-///     None,
+///     None, // Don't specify the number of threads.
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
@@ -68,7 +71,7 @@ impl CoolingSchedule {
 /// assert!(simple_function(&best, None) < 19.);
 /// ```
 #[macro_export]
-macro_rules! simulated_annealing_m {
+macro_rules! simulated_annealing {
     (
         // Generic
         ($($x:expr),*),
@@ -122,7 +125,7 @@ macro_rules! simulated_annealing_m {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(false,Some(17.))),
-///     None,
+///     None, // Don't specify the number of threads.
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
