@@ -63,6 +63,21 @@ mod random_search;
 mod simulated_annealing;
 mod util;
 
+#[macro_export]
+#[doc(hidden)]
+macro_rules! cpus {
+    ($threads:expr) => {{
+        // If `Some(n)` return `n` else `num_cpus::get()`.
+        let cpus = $threads.unwrap_or_else(num_cpus::get) as u64;
+        // Either way it must be at least 2.
+        assert!(
+            cpus >= 2,
+            "Due to the fundamentally multi-threaded design, we need at least 2 threads"
+        );
+        cpus
+    }};
+}
+
 pub use grid_search::*;
 pub use random_search::*;
 pub use simulated_annealing::*;

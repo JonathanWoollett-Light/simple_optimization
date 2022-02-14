@@ -93,14 +93,7 @@ pub fn random_search<
     iterations: u64,
 ) -> [T; N] {
     // Gets cpu data
-    let cpus = match threads {
-        Some(t) => t as u64,
-        None => num_cpus::get() as u64,
-    };
-    assert!(
-        cpus >= 2,
-        "Due to the fundamentally multi-threaded design, we need at least 2 threads"
-    );
+    let cpus = crate::cpus!(threads);
 
     let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
 
