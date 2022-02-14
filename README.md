@@ -45,7 +45,7 @@ Grid search|✅
 [Simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing)|✅
 [Bayesian optimization](https://en.wikipedia.org/wiki/Bayesian_optimization)|WIP
 [Gradient descrent](https://en.wikipedia.org/wiki/Gradient_descent)| [See my note here](https://github.com/JonathanWoollett-Light/cogent/blob/master/README.md#a-note)
-[Genetic algorithms](https://en.wikipedia.org/wiki/Genetic_algorithm) & derivatives| No plans
+[Genetic algorithms](https://en.wikipedia.org/wiki/Genetic_algorithm)| No plans
 [Ant colony optimization](https://en.wikipedia.org/wiki/Ant_colony_optimization_algorithms)| No plans
 
 I made this for my own use since the existing libraries I found felt awkward.
