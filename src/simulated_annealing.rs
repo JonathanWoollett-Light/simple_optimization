@@ -262,17 +262,17 @@ pub fn simulated_annealing<
         );
     }
 
-    let joins: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
-
-    let (_, best_params) = joins
-        .into_iter()
-        .fold((best_value, best_params), |(bv, bp), (v, p)| {
+    // Joins all handles and folds across extracting best value and best points.
+    let (_, best_params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
+        (best_value, best_params),
+        |(bv, bp), (v, p)| {
             if v < bv {
                 (v, p)
             } else {
                 (bv, bp)
             }
-        });
+        },
+    );
 
     return best_params;
 
@@ -408,7 +408,7 @@ pub fn simulated_annealing<
         // Update execution position
         // 0 represents ended state
         thread_execution_position.store(0, Ordering::SeqCst);
-        return (best_value, best_point);
+        (best_value, best_point)
     }
 
     // Samples until value in range

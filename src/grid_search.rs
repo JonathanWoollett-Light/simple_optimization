@@ -158,11 +158,11 @@ pub fn grid_search<
         evaluation_data: Option<Arc<A>>,
         polling: Option<Polling>,
         // Specifics
-        point_values: &Vec<Vec<T>>,
+        point_values: &Vec<Vec<T>>, // Ignore clippy, this needs to be `&Vec<Vec<T>>` to prevent borrow checker issue.
         mut point: [T; N],
     ) -> (f64, [T; N]) {
         // Could just `assert!(N>0)` and not handle it, but this handles it fine.
-        if 0 == point_values.len() {
+        if point_values.is_empty() {
             return (f(&point, evaluation_data), point);
         }
 
@@ -232,18 +232,18 @@ pub fn grid_search<
             );
         }
 
-        let joins: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
-        let (value, params) =
-            joins
-                .into_iter()
-                .fold((f64::MAX, [Default::default(); N]), |(bv, bp), (v, p)| {
-                    if v < bv {
-                        (v, p)
-                    } else {
-                        (bv, bp)
-                    }
-                });
-        return (value, params);
+        // Joins each handle folding across extracting the best value and best points.
+        let (value, params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
+            (f64::MAX, [Default::default(); N]),
+            |(bv, bp), (v, p)| {
+                if v < bv {
+                    (v, p)
+                } else {
+                    (bv, bp)
+                }
+            },
+        );
+        (value, params)
     }
     fn search<
         A: 'static + Send + Sync,
@@ -261,7 +261,7 @@ pub fn grid_search<
         const N: usize,
     >(
         // Generics
-        point_values: &Vec<Vec<T>>,
+        point_values: &[Vec<T>],
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
         counter: Arc<AtomicU64>,
@@ -304,6 +304,6 @@ pub fn grid_search<
                 break;
             }
         }
-        return (best_value, best_params);
+        (best_value, best_params)
     }
 }
