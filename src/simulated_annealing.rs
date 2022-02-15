@@ -19,9 +19,9 @@ use crate::util::{poll, update_execution_position, Polling};
 /// Cooling schedule for simulated annealing.
 #[derive(Clone, Copy)]
 pub enum CoolingSchedule {
-    /// $ t_{n+1} = t \cdot \ln{\frac{\ln{2}}{s+1}} $
+    /// $ t_{n+1} = t_n \cdot \ln{\frac{\ln{2}}{s+1}} $
     Logarithmic,
-    /// $ t_{n+1} = x \cdot t $
+    /// $ t_{n+1} = x \cdot t_n $
     Exponential(f64),
     /// $ t_n = \frac{t_1}{n} $
     Fast,
