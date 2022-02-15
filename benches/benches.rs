@@ -169,7 +169,7 @@ fn random_search_big() {
         None,
         None,
         None,
-        BIG_LIMIT, // billion
+        BIG_LIMIT,
     );
 }
 
@@ -295,9 +295,7 @@ fn simulated_annealing_big() {
     );
 }
 
-pub fn criterion_benchmark(c: &mut Criterion) {
-    // Random search
-    // -----------------------------------
+pub fn random_search(c: &mut Criterion) {
     c.bench_function("random_search_simple_function", |b| {
         b.iter(|| random_search_simple_function())
     });
@@ -308,9 +306,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| random_search_boundary())
     });
     c.bench_function("random_search_big", |b| b.iter(|| random_search_big()));
-
-    // Grid search
-    // -----------------------------------
+}
+pub fn grid_search(c: &mut Criterion) {
     c.bench_function("grid_search_simple_function", |b| {
         b.iter(|| grid_search_simple_function())
     });
@@ -321,9 +318,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| grid_search_boundary())
     });
     c.bench_function("grid_search_big", |b| b.iter(|| grid_search_big()));
+}
 
-    // Simulated annealing
-    // -----------------------------------
+pub fn simulated_annealing(c: &mut Criterion) {
     c.bench_function("simulated_annealing_simple_function", |b| {
         b.iter(|| simulated_annealing_simple_function())
     });
@@ -337,5 +334,5 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| simulated_annealing_big())
     });
 }
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, random_search, grid_search, simulated_annealing);
 criterion_main!(benches);

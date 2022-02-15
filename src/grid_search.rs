@@ -349,11 +349,11 @@ pub fn grid_search<
 
         for cartesian_product in point_ranges
             .iter()
-            .map(|r| r.clone().into_iter())
+            .map(|r| r.clone())
             .multi_cartesian_product()
         {
             // Gets new point
-            let mut point = start_point.clone();
+            let mut point = start_point;
 
             // print!("[");
             for i in 0..N {
