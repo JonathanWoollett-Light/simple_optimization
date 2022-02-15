@@ -204,7 +204,8 @@ mod tests {
             [0f64..10f64, 5f64..15f64, 10f64..20f64],
             simple_function,
             None,
-            Some(Polling::new(false, Some(18.))),
+            Some(Polling::new(false, None)),
+            None,
             [10, 10, 10],
         );
         assert_eq!(simple_function(&best, None), 15.);
@@ -215,9 +216,11 @@ mod tests {
             [0..10, 5..15, 10..20],
             simple_function_u8,
             None,
-            Some(Polling::new(false, Some(18.))),
+            Some(Polling::new(false, None)),
+            None,
             [10, 10, 10],
         );
+        println!("best: {:?}", best);
         assert_eq!(simple_function_u8(&best, None), 15.);
     }
     #[test]
@@ -232,7 +235,8 @@ mod tests {
             ],
             complex_function,
             None,
-            Some(Polling::new(false, Some(-19.))),
+            Some(Polling::new(false, None)),
+            None,
             [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
         );
         assert!(complex_function(&best, None) < -14.);
@@ -243,9 +247,11 @@ mod tests {
             [0..10, 5..15, 10..20, 15..25, 20..30],
             complex_function_u8,
             None,
-            Some(Polling::new(false, Some(-14.589918826094747))),
+            Some(Polling::new(false, None)),
+            None,
             [4, 4, 4, 4, 4], // 4^5 = 1024 ~= 1000
         );
+        // println!("best: {:?}",best);
         assert_eq!(complex_function_u8(&best, None), -14.589918826094747);
     }
     #[test]
@@ -258,6 +264,7 @@ mod tests {
                 boundary_function,
                 images.clone(),
                 Some(Polling::new(false, Some(0.))),
+                Some(3),
                 [255],
             );
             assert_eq!(boundary_function(&best, images.clone()), 0.);

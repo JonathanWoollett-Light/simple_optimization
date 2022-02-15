@@ -58,7 +58,7 @@ impl CoolingSchedule {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(false,Some(17.))),
-///     None, // Don't specify the number of threads.
+///     None, // We don't specify the number of threads.
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
@@ -125,7 +125,7 @@ macro_rules! simulated_annealing {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we don't print progress `false` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(false,Some(17.))),
-///     None, // Don't specify the number of threads.
+///     None, // We don't specify the number of threads.
 ///     100., // Starting temperature is `100.`.
 ///     1., // Minimum temperature is `1.`.
 ///     simple_optimization::CoolingSchedule::Fast, // Use fast cooling schedule.
@@ -164,9 +164,10 @@ pub fn simulated_annealing<
     samples_per_temperature: u64,
     variance: f64,
 ) -> [T; N] {
+    // Gets cpu number
     let cpus = crate::cpus!(threads);
-
-    let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
+    // 1 cpu is used for polling (this one), so we have -1 cpus for searching.
+    let search_cpus = cpus - 1;
 
     let steps = cooling_schedule.steps(starting_temperature, minimum_temperature);
     let thread_exit = Arc::new(AtomicBool::new(false));
@@ -175,7 +176,7 @@ pub fn simulated_annealing<
     let remainder = samples_per_temperature % search_cpus;
     let per = samples_per_temperature / search_cpus;
 
-    let (best_value, best_params) = search(
+    let (best_value, mut best_params) = search(
         // Generics
         ranges_arc.clone(),
         f,
@@ -263,7 +264,7 @@ pub fn simulated_annealing<
     }
 
     // Joins all handles and folds across extracting best value and best points.
-    let (_, best_params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
+    let (new_best_value, new_best_params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
         (best_value, best_params),
         |(bv, bp), (v, p)| {
             if v < bv {
@@ -273,6 +274,10 @@ pub fn simulated_annealing<
             }
         },
     );
+    // If the best value from threads is better than the value from remainder
+    if new_best_value > best_value {
+        best_params = new_best_params
+    }
 
     return best_params;
 

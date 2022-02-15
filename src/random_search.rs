@@ -24,7 +24,7 @@ use crate::util::{poll, update_execution_position, Polling};
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(true,Some(19.))),
-///     None, // Don't specify the number of threads.
+///     None, // We don't specify the number of threads.
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
@@ -73,7 +73,7 @@ macro_rules! random_search {
 ///     None, // No additional evaluation data.
 ///     // By using `new` this defaults to polling every `10ms`, we also print progress `true` and exit early if `19.` or less is reached.
 ///     Some(Polling::new(true,Some(19.))),
-///     None, // Don't specify the number of threads.
+///     None, // We don't specify the number of threads.
 ///     1000, // Take `1000` samples (split between threads, so each thread only takes `1000/n` samples).
 /// );
 /// assert!(simple_function(&best, None) < 19.);
@@ -92,17 +92,17 @@ pub fn random_search<
     // Specifics
     iterations: u64,
 ) -> [T; N] {
-    // Gets cpu data
+    // Gets cpu number
     let cpus = crate::cpus!(threads);
-
-    let search_cpus = cpus - 1; // 1 cpu is used for polling, this one.
+    // 1 cpu is used for polling (this one), so we have -1 cpus for searching.
+    let search_cpus = cpus - 1;
 
     let remainder = iterations % search_cpus;
     let per = iterations / search_cpus;
 
     let ranges_arc = Arc::new(ranges);
 
-    let (best_value, best_params) = search(
+    let (best_value, mut best_params) = search(
         // Generics
         ranges_arc.clone(),
         f,
@@ -187,7 +187,7 @@ pub fn random_search<
     }
 
     // Joins all handles and folds across extracting the best value and best points.
-    let (_, best_params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
+    let (new_best_value, new_best_params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
         (best_value, best_params),
         |(bv, bp), (v, p)| {
             if v < bv {
@@ -197,6 +197,10 @@ pub fn random_search<
             }
         },
     );
+    // If the best value from threads is better than the value from remainder
+    if new_best_value < best_value {
+        best_params = new_best_params
+    }
 
     return best_params;
 

@@ -181,6 +181,7 @@ fn grid_search_simple_function() {
         simple_function,
         None,
         Some(Polling::new(false, Some(SIMPLE_EXIT))),
+        None,
         [GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT, GRID_SIMPLE_LIMIT],
     );
 }
@@ -196,6 +197,7 @@ fn grid_search_complex_function() {
         complex_function,
         None,
         Some(Polling::new(false, Some(COMPLEX_EXIT))),
+        None,
         [
             GRID_COMPLEX_LIMIT,
             GRID_COMPLEX_LIMIT,
@@ -212,6 +214,7 @@ fn grid_search_boundary() {
         boundary_function,
         images.clone(),
         Some(Polling::new(false, Some(0.))),
+        None,
         [255],
     );
 }
@@ -219,6 +222,7 @@ fn grid_search_big() {
     let _best = simple_optimization::grid_search(
         [0f64..1f64, 0f64..1f64, 0f64..1f64],
         simple_function,
+        None,
         None,
         None,
         [GRID_BIG_LIMIT, GRID_BIG_LIMIT, GRID_BIG_LIMIT],

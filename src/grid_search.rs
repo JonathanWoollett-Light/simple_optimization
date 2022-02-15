@@ -1,8 +1,9 @@
-use itertools::izip;
+use itertools::{izip, Itertools};
 use rand::distributions::uniform::SampleUniform;
 use std::{
-    f64,
-    ops::{AddAssign, Div, Range, Sub},
+    convert::TryInto,
+    f64, fmt,
+    ops::{Add, AddAssign, Div, Mul, Range, Sub},
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
         Arc, Mutex,
@@ -24,6 +25,7 @@ use crate::util::{poll, Polling};
 ///     None, //  No additional evaluation data.
 ///     // Polling every `10ms`, printing progress (`true`), exiting early if `15.` or less is reached, and not printing thread execution data (`false`).
 ///     Some(Polling { poll_rate: Duration::from_millis(5), printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
+///     None, // We don't specify the number of threads.
 ///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.
@@ -40,6 +42,7 @@ macro_rules! grid_search {
         $f: expr,
         $evaluation_data: expr,
         $polling: expr,
+        $threads: expr,
         // Specific
         $points: expr,
     ) => {
@@ -55,6 +58,7 @@ macro_rules! grid_search {
                 $f,
                 $evaluation_data,
                 $polling,
+                $threads,
                 $points,
             )
         }
@@ -79,6 +83,7 @@ macro_rules! grid_search {
 ///     None, //  No additional evaluation data.
 ///     // Polling every `10ms`, printing progress (`true`), exiting early if `15.` or less is reached, and not printing thread execution data (`false`).
 ///     Some(Polling { poll_rate: Duration::from_millis(5), printing: true, early_exit_minimum: Some(15.), thread_execution_reporting: false }),
+///     None, // We don't specify the number of threads.
 ///     // Take `10` samples along range `0` (`0..10`), `11` along range `1` (`5..15`)
 ///     //  and `12` along range `2` (`10..20`).
 ///     // In total taking `10*11*12=1320` samples.
@@ -94,11 +99,14 @@ pub fn grid_search<
         + Send
         + Sync
         + Default
+        + fmt::Debug
         + SampleUniform
         + PartialOrd
         + AddAssign
+        + Add<Output = T>
         + Sub<Output = T>
         + Div<Output = T>
+        + Mul<Output = T>
         + num::FromPrimitive,
     const N: usize,
 >(
@@ -107,79 +115,130 @@ pub fn grid_search<
     f: fn(&[T; N], Option<Arc<A>>) -> f64,
     evaluation_data: Option<Arc<A>>,
     polling: Option<Polling>,
+    threads: Option<usize>,
     // Specifics
     points: [u64; N],
 ) -> [T; N] {
+    // Gets cpu number
+    let cpus = crate::cpus!(threads);
+    // 1 cpu is used for polling (this one), so we have -1 cpus for searching.
+    let search_cpus = cpus - 1;
+    // Computes points per thread
+    let mut remainder = [Default::default(); N];
+    let mut per = [Default::default(); N];
+    for i in 0..N {
+        remainder[i] = points[i] % search_cpus as u64;
+        per[i] = std::cmp::max(points[i] / search_cpus as u64, 1);
+    }
+
+    // println!("remainder: {:?}, per: {:?}",remainder,per);
+
+    // Points ranges for remainder
+    // ---------------------------------------
+    let remainder_ranges: [Range<u64>; N] = remainder
+        .iter()
+        .map(|&r| 0..r)
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    // Points ranges per thread
+    // ---------------------------------------
+    // If at any point the threads need to evaluate more than 1 value.
+    let some_thread_work = per.iter().any(|&x| x > 1);
+
+    // We effectively fold over our threads for each point range
+    let per_ranges_opt: Option<Vec<[Range<u64>; N]>> = some_thread_work.then(|| {
+        let mut offset = [Default::default(); N];
+        // Initial offset is after remainder
+        for i in 0..N {
+            offset[i] = remainder_ranges[i].end;
+        }
+
+        (0..search_cpus)
+            .map(|_| {
+                (0..N)
+                    .map(|i| {
+                        let new = offset[i]..offset[i] + per[i];
+                        offset[i] = new.end;
+                        new
+                    })
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>()
+    });
+
+    // println!("remainder_ranges: {:?}, per_ranges_opt: {:?}",remainder_ranges,per_ranges_opt);
+
+    // Checks ranges
+    // ---------------------------------------
+    // Number of evaluations all the threads do.
+    let mut iterations = 0;
+    // Number of evaluations the remainder does.
+    let mut remainder = 0;
+    for i in 0..N {
+        // Gets points covered by remainder
+        let remainder_point_sum = remainder_ranges[i].end - remainder_ranges[i].start;
+        remainder += remainder_point_sum;
+        // Gets points covered by threads
+        let point_sum = per_ranges_opt.as_ref().map_or(0, |per_ranges| {
+            per_ranges
+                .iter()
+                .fold(0, |acc, x| acc + x[i].end - x[i].start)
+        });
+        iterations += point_sum;
+        // Checks sum
+        assert_eq!(
+            remainder_point_sum + point_sum,
+            points[i],
+            "remainder: {:?}, threads: {:?}",
+            remainder_ranges,
+            per_ranges_opt
+        );
+    }
+
     // Compute step sizes
+    // ---------------------------------------
     let mut steps = [Default::default(); N];
     for (r, k, s) in izip!(ranges.iter(), points.iter(), steps.iter_mut()) {
         *s = (r.end - r.start) / T::from_u64(*k).unwrap();
     }
 
-    // Compute point values
-    let point_values: Vec<Vec<T>> = izip!(ranges.iter(), points.iter(), steps.iter())
-        .map(|(r, k, s)| {
-            (0..*k)
-                .scan(r.start, |state, _| {
-                    // Do this so the first value is `r.start` instead of `r.start+s` and the last value is `r.end-s` instead of r.end`.
-                    let prev_state = *state;
-                    *state += *s;
-                    Some(prev_state)
-                })
-                .collect()
-        })
-        .collect();
-
-    // Search points
-    let mut start = [Default::default(); N];
-    for (s, p) in start.iter_mut().zip(point_values.iter()) {
-        *s = p[0];
-    }
-    let (_, params) = thread_search(f, evaluation_data, polling, &point_values, start);
-    return params;
-
-    fn thread_search<
-        A: 'static + Send + Sync,
-        T: 'static
-            + Copy
-            + Send
-            + Sync
-            + Default
-            + SampleUniform
-            + PartialOrd
-            + AddAssign
-            + Sub<Output = T>
-            + Div<Output = T>
-            + num::FromPrimitive,
-        const N: usize,
-    >(
+    // Covers remainder section
+    // ---------------------------------------
+    let ranges_arc = Arc::new(ranges);
+    let (best_value, mut best_params) = search(
         // Generics
-        f: fn(&[T; N], Option<Arc<A>>) -> f64,
-        evaluation_data: Option<Arc<A>>,
-        polling: Option<Polling>,
+        ranges_arc.clone(),
+        f,
+        evaluation_data.clone(),
+        // Since we are doing this on the same thread, we don't need to use these
+        Arc::new(AtomicU64::new(Default::default())),
+        Arc::new(Mutex::new(Default::default())),
+        Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU8::new(0)),
+        Arc::new([]),
         // Specifics
-        point_values: &Vec<Vec<T>>, // Ignore clippy, this needs to be `&Vec<Vec<T>>` to prevent borrow checker issue.
-        mut point: [T; N],
-    ) -> (f64, [T; N]) {
-        // Could just `assert!(N>0)` and not handle it, but this handles it fine.
-        if point_values.is_empty() {
-            return (f(&point, evaluation_data), point);
-        }
+        remainder_ranges,
+        steps,
+    );
 
+    // println!("completed remainder: {}",best_value);
+
+    // Threads
+    // ---------------------------------------
+
+    if let Some(per_ranges) = per_ranges_opt {
         let thread_exit = Arc::new(AtomicBool::new(false));
-        // (handles,counters)
-        let (handles, links): (Vec<_>, Vec<_>) = point_values[0]
-            .iter()
-            .map(|p_value| {
-                point[0] = *p_value;
-                let point_values_clone = point_values.clone();
+        let (handles, links): (Vec<_>, Vec<_>) = (0..search_cpus)
+            .zip(per_ranges.into_iter())
+            .map(|(_, per_ranges)| {
+                let ranges_clone = ranges_arc.clone();
                 let counter = Arc::new(AtomicU64::new(0));
                 let thread_best = Arc::new(Mutex::new(f64::MAX));
                 let thread_execution_position = Arc::new(AtomicU8::new(0));
-                let thread_execution_time = Arc::new([
-                    Mutex::new((Duration::new(0, 0), 0)),
-                    Mutex::new((Duration::new(0, 0), 0)),
-                ]);
+                let thread_execution_time = Arc::new([]);
 
                 let counter_clone = counter.clone();
                 let thread_best_clone = thread_best.clone();
@@ -191,7 +250,7 @@ pub fn grid_search<
                     thread::spawn(move || {
                         search(
                             // Generics
-                            &point_values_clone,
+                            ranges_clone,
                             f,
                             evaluation_data_clone,
                             counter_clone,
@@ -200,8 +259,8 @@ pub fn grid_search<
                             thread_execution_position_clone,
                             thread_execution_time_clone,
                             // Specifics
-                            point,
-                            1,
+                            per_ranges,
+                            steps,
                         )
                     }),
                     (
@@ -217,13 +276,11 @@ pub fn grid_search<
         let (counters, links): (Vec<Arc<AtomicU64>>, Vec<_>) = links.into_iter().unzip();
         let (thread_bests, links): (Vec<Arc<Mutex<f64>>>, Vec<_>) = links.into_iter().unzip();
         let (thread_execution_positions, thread_execution_times) = links.into_iter().unzip();
-
         if let Some(poll_data) = polling {
-            let iterations = point_values.iter().map(|pvs| pvs.len() as u64).product();
             poll(
                 poll_data,
                 counters,
-                0,
+                remainder,
                 iterations,
                 thread_bests,
                 thread_exit,
@@ -232,19 +289,25 @@ pub fn grid_search<
             );
         }
 
-        // Joins each handle folding across extracting the best value and best points.
-        let (value, params) = handles.into_iter().map(|h| h.join().unwrap()).fold(
-            (f64::MAX, [Default::default(); N]),
-            |(bv, bp), (v, p)| {
+        // Joins all handles and folds across extracting the best value and best points.
+        let (new_best_value, new_best_params) = handles
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .fold((best_value, best_params), |(bv, bp), (v, p)| {
                 if v < bv {
                     (v, p)
                 } else {
                     (bv, bp)
                 }
-            },
-        );
-        (value, params)
+            });
+        // If the best value from threads is better than the value from remainder
+        if new_best_value < best_value {
+            best_params = new_best_params
+        }
     }
+
+    return best_params;
+
     fn search<
         A: 'static + Send + Sync,
         T: 'static
@@ -252,58 +315,67 @@ pub fn grid_search<
             + Send
             + Sync
             + Default
+            + fmt::Debug
             + SampleUniform
             + PartialOrd
             + AddAssign
+            + Add<Output = T>
             + Sub<Output = T>
             + Div<Output = T>
+            + Mul<Output = T>
             + num::FromPrimitive,
         const N: usize,
     >(
         // Generics
-        point_values: &[Vec<T>],
+        ranges: Arc<[Range<T>; N]>,
         f: fn(&[T; N], Option<Arc<A>>) -> f64,
         evaluation_data: Option<Arc<A>>,
         counter: Arc<AtomicU64>,
         best: Arc<Mutex<f64>>,
         thread_exit: Arc<AtomicBool>,
-        thread_execution_position: Arc<AtomicU8>,
-        thread_execution_times: Arc<[Mutex<(Duration, u64)>; 2]>,
+        _thread_execution_position: Arc<AtomicU8>,
+        _thread_execution_times: Arc<[Mutex<(Duration, u64)>; 0]>,
         // Specifics
-        mut point: [T; N],
-        index: usize,
+        point_ranges: [Range<u64>; N],
+        steps: [T; N],
     ) -> (f64, [T; N]) {
-        if index == point_values.len() {
-            // panic!("hit here");
-            counter.fetch_add(1, Ordering::SeqCst);
-            return (f(&point, evaluation_data), point);
-        }
+        let (mut best_value, mut best_points) = (f64::MAX, [Default::default(); N]);
 
-        let mut best_value = f64::MAX;
-        let mut best_params = [Default::default(); N];
-        for p_value in point_values[index].iter() {
-            point[index] = *p_value;
-            let (value, params) = search(
-                point_values,
-                f,
-                evaluation_data.clone(),
-                counter.clone(),
-                best.clone(),
-                thread_exit.clone(),
-                thread_execution_position.clone(),
-                thread_execution_times.clone(),
-                point,
-                index + 1,
-            );
-            if value < best_value {
-                best_value = value;
-                best_params = params;
+        let mut start_point = [Default::default(); N];
+        for i in 0..N {
+            start_point[i] = ranges[i].start;
+        }
+        // println!("start_point: {:?}",start_point);
+
+        for cartesian_product in point_ranges
+            .iter()
+            .map(|r| r.clone().into_iter())
+            .multi_cartesian_product()
+        {
+            // Gets new point
+            let mut point = start_point.clone();
+
+            // print!("[");
+            for i in 0..N {
+                // print!("{:?}*{:?}=",steps[i],T::from_u64(cartesian_product[i]).unwrap());
+                point[i] += steps[i] * T::from_u64(cartesian_product[i]).unwrap();
+                // print!("{:?},",point[i]);
+            }
+            // println!("] = {:?}",point);
+            let new = f(&point, evaluation_data.clone());
+            // println!("{:?} -> {:?}",point,new);
+            if new < best_value {
+                best_value = new;
+                best_points = point;
                 *best.lock().unwrap() = best_value;
             }
+            counter.fetch_add(1, Ordering::SeqCst);
+            // Checks early exit
             if thread_exit.load(Ordering::SeqCst) {
                 break;
             }
         }
-        (best_value, best_params)
+
+        (best_value, best_points)
     }
 }
