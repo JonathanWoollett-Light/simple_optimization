@@ -8,6 +8,7 @@ use num::ToPrimitive;
 use statrs::distribution::ContinuousCDF;
 
 // Run a test for this with `cargo test bayesian_optimization_simple -- --nocapture`
+// Implemented using https://machinelearningmastery.com/what-is-bayesian-optimization/ as a guide.
 pub fn bayesian_optimization<
     A: 'static + Send + Sync,
     T: 'static
