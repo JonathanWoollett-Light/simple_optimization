@@ -371,4 +371,23 @@ mod tests {
             assert_eq!(boundary_function(&best, images.clone()), 0.);
         }
     }
+
+    // Simulated annealing
+    // ---------------------------------------
+    #[test]
+    fn bayesian_optimization_simple() {
+        for _ in 0..CHECK_ITERATIONS {
+            let best = simple_optimization::bayesian_optimization(
+                [0f64..10f64, 5f64..15f64, 10f64..20f64],
+                simple_function,
+                None,
+                None,
+                None,
+                100,
+                100,
+                100,
+            );
+            assert!(simple_function(&best, None) < 19.);
+        }
+    }
 }

@@ -60,6 +60,7 @@
 //!
 //! The last 3 of these I wouldn't expect you would ever use. But I use them for debugging this library and I think they could possibly in some rare circumstance be useful to you (so no harm having them as an option, well, only a few microseconds of harm).
 
+mod bayesian_optimization;
 mod grid_search;
 mod random_search;
 mod simulated_annealing;
@@ -80,6 +81,7 @@ macro_rules! cpus {
     }};
 }
 
+pub use bayesian_optimization::*;
 pub use grid_search::*;
 pub use random_search::*;
 pub use simulated_annealing::*;

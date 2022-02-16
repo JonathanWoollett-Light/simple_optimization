@@ -25,6 +25,8 @@ num_cpus = "1.13.0" # Multi-threading
 print_duration = "1.0.0" # Printing progress
 num = "0.4.0" # Generics
 rand_distr = "0.4.1" # Normal distribution
+friedrich = "0.4.1" # Gaussian process for bayesian optimization
+statrs = "0.15.0" # Nomral distribution with cumulative distribution function
 
 # benchmarks
 [dev-dependencies]
