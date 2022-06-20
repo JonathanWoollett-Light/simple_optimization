@@ -4,8 +4,6 @@
 [![lib.rs.io](https://img.shields.io/crates/v/simple_optimization?color=blue&label=lib.rs)](https://lib.rs/crates/simple_optimization)
 [![docs](https://img.shields.io/crates/v/simple_optimization?color=yellow&label=docs)](https://docs.rs/simple_optimization)
 
-*This is not archevied yet, but I must admit, it is close, I am too busy...*
-
 Some simple multi-threaded optimizers.
 
 You could do a random search like:
